@@ -1,14 +1,26 @@
-; Godot project file. Engine version is pinned in tools/setup_godot.sh.
-; GL Compatibility renderer, because the CI container has no GPU and falls back
-; to software rasterisation. See CLAUDE.md.
+; Engine version is pinned in tools/setup_godot.sh. The original prototype
+; targeted 4.3; 4.7 is stricter about static typing, which CLAUDE.md requires
+; anyway, and is what the v0.3 agent tooling needs.
+;
+; GL Compatibility renderer, because CI containers have no GPU and fall back to
+; software rasterisation. See CLAUDE.md.
+;
+; run/main_scene is deliberately empty until slice 0 creates main.tscn. Pointing
+; it at a file that does not exist makes every headless boot check noisy.
 
 config_version=5
 
 [application]
 
-config/name="Cowboys and Pirates"
+config/name="Deadweight"
 config/description="Sol, 2100. A gold rush in its second decade."
+run/main_scene=""
 config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
 
 [rendering]
 

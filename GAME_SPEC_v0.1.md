@@ -1,215 +1,133 @@
-# GAME_SPEC v0.1 — "The Loop"
+# GAME_SPEC v0.1 — "Deadweight" (working title)
 
-> ## ⚠ THIS DOCUMENT IS A RECONSTRUCTION
->
-> `GAME_SPEC_v0.2.md` opens with *"v0.1 proved the loop works"* and refers back
-> to v0.1 in §0, §3 and §8 — but no v0.1 spec and no v0.1 code exist in this
-> repository. This file was reconstructed from what v0.2 assumes, so that v0.2
-> has something to build on.
->
-> **Every line here is inference until confirmed.** Two markers are used:
->
-> - **`[INFERRED]`** — a structural claim derived from v0.2. If one of these is
->   wrong, v0.2 is built on the wrong foundation. **These need a human read.**
-> - **`[PLAY-GATED]`** — a number nobody has decided yet. Same meaning as in
->   v0.2 §1: build as written, expose in `data/`, move on.
->
-> If real v0.1 code exists elsewhere, push it and delete this file. Reconciling
-> it against this reconstruction is a faster read than writing the spec fresh.
+## 0. Purpose of this version
 
----
+Prove that the core loop is fun in under 10 minutes of play: **manage power, watch
+timers, click things under pressure, survive 5 jumps.**
 
-## 0. Thesis
+If it is not fun with grey rectangles, no amount of art will save it.
 
-One ship, one enemy at a time, six fights in a row, and a decision between each.
-v0.1 exists to prove that real-time-with-pause combat over a powered ship is fun
-before anyone builds a crew layer on top of it.
+## 1. Goals
 
-**Crew in v0.1 are interchangeable bodies.** They man, they repair, they die and
-it costs nothing but a body. Making that loss hurt is the entire job of v0.2 —
-so v0.1 deliberately does not attempt it.
+- MUST: one playable run of exactly 5 fixed encounters, start to death-or-victory
+- MUST: real-time combat with a working pause (SPACE)
+- MUST: power allocation between 4 systems, changeable mid-combat
+- MUST: 3 crew that can be assigned to rooms, take damage, and die
+- MUST: run under 10 minutes, be losable, and be winnable
 
-## 1. Non-goals
+## 2. Non-Goals (DO NOT BUILD)
 
-Everything in `GAME_SPEC_v0.2 §3`, plus the whole of v0.2 itself: no classes, no
-crew XP, no Medbay or Clone Bay, no fire, no combat log. Crew teleport between
-rooms; pathfinding is not in scope.
+Everything here is v0.2+. If the plan mentions any of it, the plan is wrong.
 
-## 2. The ship
+- No fire, no hull breaches, no oxygen, no boarding, no enemy crew
+- No crew pathfinding — crew teleport instantly to the assigned room
+- No Clone Bay (v0.2, first item)
+- No procedural map — the 5 encounters are a hardcoded list
+- No shops, no weapon drops, no ship selection, no meta-progression
+- No power armor quest, no story, no faction system (v0.3+)
+- No sprites, no imported assets, no audio, no animation beyond bar fills
+- No save/load
+- No settings menu, no main menu — the game starts at encounter 1 on launch
 
-**Six rooms** — decided, not inferred. Four carry a system; two carry none and
-exist to be walked through and, from v0.2, to burn.
+## 3. Presentation
 
-| Room | System | Effect |
-|------|--------|--------|
-| Weapons | Weapons | Powers weapon slots. Unpowered weapons do not charge. |
-| Shields | Shields | Each 2 power = 1 shield layer. |
-| Engines | Engines | Converts power into evasion %. |
-| Medical | — | **Empty in v0.1.** Exists in the layout so v0.2 §6 can fill it. |
-| Reactor | — | No system. Holds crew, and burns. |
-| Cargo | — | No system. Holds crew, and burns. |
+Programmer art only. `ColorRect` + `Label` + `ProgressBar`, built **in code**.
+Layout: player ship left half, enemy ship right half, HUD bottom.
+Dark background, one accent colour per system. Readable > pretty.
 
-The two systemless rooms are inert in v0.1 on purpose. They are here so that
-`data/ship_layout.json` never changes shape: v0.2 §7 fire needs somewhere to
-spread that is not immediately catastrophic, and a ship where every room is
-critical makes fire a timer rather than a spatial decision.
+## 4. State model
 
-### Layout
+### Ship (player)
+- `hull: int` — start 30, max 30
+- `reactor: int` — start 6 power bars
+- `scrap: int` — start 0
+- Systems, each: `power_assigned: int`, `damage: int` (0–3), `max_power: int`
 
-A 2×3 grid. Adjacency is what fire spreads along in v0.2, so the shape matters
-more than it appears to in v0.1, where nothing reads it.
+| System  | max_power | Effect per power bar |
+|---------|-----------|----------------------|
+| Shields | 4         | 1 shield layer per 2 power (max 2) |
+| Engines | 3         | +5% evasion (max 15%) |
+| Weapons | 4         | powers weapon slots (see below) |
+| Medbay  | 2         | heals crew in medbay room, 4 HP/s at any power > 0 |
 
-```
-  Weapons ── Shields ── Medical
-     │          │          │
-  Reactor ── Engines ──  Cargo
-```
-
-Adjacency pairs: Weapons–Shields, Shields–Medical, Reactor–Engines,
-Engines–Cargo, Weapons–Reactor, Shields–Engines, Medical–Cargo.
-
-Multiple paths between rooms is deliberate. A pure chain makes fire spread
-predictable and therefore uninteresting.
-
-`data/ship_layout.json` defines rooms, their system, and this adjacency list.
-Phase 1 creates the file; this table is its contract.
-
-### Power
-- Reactor has a pool of total power bars. Starting pool: **6 [PLAY-GATED]**.
-- The player assigns bars to systems. Assigned power cannot exceed the pool.
-- **A damaged system loses capacity.** A system with `damage` ≥ its power level
-  cannot hold that much power; bars are dropped and must be reassigned.
-- At `damage` 3 a system is **destroyed**: no power, no function, until repaired.
-
-### Hull
-- Starting hull: **30 [PLAY-GATED]**. At 0 the run ends.
-- Hull damage is permanent within a run except via the jump-screen repair.
-
-## 3. Combat
-
-Real-time, pausable at any moment, and **fully resolvable while paused** —
-orders given under pause take effect on unpause. Pause is not a menu; it is how
-the game is played.
-
-### The tick
-**[INFERRED]** A fixed simulation step (**20 Hz [PLAY-GATED]**) advances, in order:
-
-1. Weapon charge on both ships
-2. Weapon fire and hit resolution
-3. Shield regeneration
-4. Crew action progress (manning XP is v0.2; repair here)
-5. Death and destruction checks
-
-Fixed-step rather than frame-delta, because `sim/sim_runner.gd` must run 500
-games far faster than real time and get identical results.
-
-### Weapons
-**[INFERRED]** Weapons are charge-and-fire, not hitscan or projectile-travel.
-
-**The starting ship carries two weapons** — decided, not inferred. Two is the
-number that makes the Weapons power allocation a choice: when power is short you
-must decide which of the two charges, and that decision is most of what makes
-the Weapons room worth defending.
-
-- Each weapon has a charge time, a damage value, and a shield-piercing value.
-- Each weapon costs power. A weapon charges only while the Weapons system has
-  power allocated to its slot.
-- On fire, the player has selected a target room. **[PLAY-GATED]** If no room is
-  selected, it targets a random powered room.
-
-### Hit resolution
-1. Roll evasion. On success: miss, no damage. Log a miss.
-2. Subtract shield layers. Each layer absorbs 1 damage and is stripped.
-3. Remaining damage hits hull, and the same amount damages the struck room's
-   system.
-
-**[INFERRED]** Damage hits hull *and* system, rather than one or the other.
-This is what makes targeting a choice — shoot Shields to open them up, shoot
-hull to win — and v0.2 §7's "a hit has a 20% chance to start a fire in the
-struck room" assumes a struck room exists.
-
-### Shields
-- `floor(power / 2)` layers. **[PLAY-GATED]**
-- One layer regenerates every **4s [PLAY-GATED]**, from zero upward.
-- Layers regenerate during combat only.
-
-### Evasion
-- `engine_power × 5%`, capped at **60% [PLAY-GATED]**.
-- **[INFERRED]** Manning Engines adds a bonus. v0.2 §4 gives the Pilot class
-  "+5% flat evasion **while manning Engines**", which only parses if manning
-  already did something in v0.1.
+A system with `damage: d` has effective power `min(power_assigned, max_power - d)`.
+At `damage: 3` the system is offline.
 
 ### Crew
-- HP: **100 [PLAY-GATED]**. No classes, no XP, no states beyond alive/dead.
-- Crew occupy a room and are moved by clicking. Movement is instant.
-- **Manning:** a crew member in a room with a system improves it by
-  **+15% [PLAY-GATED]**. One manner per system.
-- **Repair:** a crew member in a damaged room removes 1 damage point per
-  **2s [PLAY-GATED]**. While repairing they are not manning.
-- Crew die at 0 HP. **[INFERRED]** In v0.1 death is immediate — the DOWNED state
-  and the bleed-out timer are introduced in v0.2 §5.
+3 crew, each: `name: String`, `hp: int` (max 100), `room: String`, `alive: bool`.
+- Crew in a damaged room repair **1 damage point per 4 seconds**.
+- Crew in an undamaged room "man" it: +10% to that system's effect
+  (weapons charge 10% faster, shields recharge 10% faster, engines +5% evasion flat).
+- Crew take 15 damage when their room is hit. At 0 HP they die permanently in v0.1.
+- Names: Smith (captain), Vasquez, Okonkwo. Placeholder, content pass comes later.
 
-### The enemy
-- Same ship model, same rules: hull, power, shields, evasion, systems, crew.
-- **[PLAY-GATED]** Enemy AI: target the highest-power enemy system that is not
-  already destroyed; re-target on destruction. Enemy crew repair the most
-  damaged room.
-- Enemies are templates in `data/enemies.json`, difficulty rising by index.
+### Weapons
+2 slots, both filled at start:
+- **Laser Mk1** — 1 power, charge 8.0s, 1 shot, 1 damage
+- **Burst Laser** — 2 power, charge 11.0s, 2 shots, 1 damage each
 
-### Ending an encounter
-- Enemy hull 0 → victory, award scrap.
-- Player hull 0 → run over.
-- **[PLAY-GATED]** Scrap reward: `15 + 5 × encounter_index`.
+A weapon only charges if its power requirement is met by Weapons system power.
+Player clicks an enemy room to set the target; the shot fires automatically when charged.
 
-## 4. Structure
+### Combat resolution
+- Hit chance = `100% - enemy_evasion`
+- Each shield layer absorbs 1 damage and is consumed; layers recharge 1 per 4.0s
+- Damage that gets through: −1 hull AND +1 damage to the targeted room's system
+- Same rules apply to the enemy shooting the player, targeting a random player room
 
-**Five hardcoded encounters, linear, no branching.** No map, no node types, no
-choice of route. v0.2 raises this to six; v0.3 replaces it with a map.
+### Enemy
+Single ship per combat: `hull`, `evasion`, `shield_layers`, one weapon with a
+fixed cooldown. Enemy picks a random player room each shot. No enemy power management.
 
-Between encounters, a jump screen with exactly two options, both repeatable
-while scrap lasts:
+## 5. The 5 encounters (hardcoded, in this order)
 
-- **Repair:** 15 scrap → +5 hull
-- **Upgrade:** 30 scrap → +1 reactor power
+| # | Type   | Content |
+|---|--------|---------|
+| 1 | Combat | Scout — hull 15, evasion 5%, 0 shields, weapon 1 dmg / 9.0s |
+| 2 | Event  | Distress beacon. Choices: **Board it** (60% +25 scrap, 40% one crew −40 HP) / **Scan first** (+10 scrap) / **Ignore** (nothing) |
+| 3 | Combat | Raider — hull 22, evasion 10%, 1 shield layer, weapon 2 dmg / 11.0s |
+| 4 | Event  | Derelict hauler. Choices: **Strip it** (+20 scrap, −2 hull) / **Leave** (nothing) |
+| 5 | Combat | Enforcer — hull 30, evasion 10%, 1 shield layer, two weapons (1 dmg / 7.0s, 2 dmg / 13.0s) |
 
-These two numbers are quoted verbatim in `GAME_SPEC_v0.2 §8` and are the one
-part of this document that is **not** inferred.
+Combat rewards: +15 scrap on victory.
 
-Surviving all five encounters wins the run.
+### Between encounters
+A jump screen with two buttons, then **JUMP**:
+- Repair: 15 scrap → +5 hull (capped at max)
+- Upgrade: 30 scrap → +1 reactor power
+Both repeatable while scrap allows.
 
-## 5. Acceptance criteria
+## 6. Win / lose
 
-1. `tools/verify.sh` is green, both commands.
-2. A human can complete a full 5-encounter run.
-3. Power can be assigned, a system can be destroyed by damage, and the assigned
-   bars are dropped when its capacity falls.
-4. A crew member can man a system, be reassigned to repair, and die.
-5. Shields strip and regenerate; evasion produces misses.
-6. `sim/sim_runner.gd` runs 500 games with zero crashes and reports win rate and
-   average encounter of death.
-7. **A run seed reproduces a run exactly.** Same seed, same outcome, every time.
-8. The simulation runs headless with no scene tree. `sim/` imports nothing from
-   `ui/`.
+- **Lose** when `hull <= 0` or all crew dead → screen: "RUN ENDED — Jump N of 5"
+- **Win** after encounter 5 → screen: "RUN COMPLETE — hull X, scrap Y, crew alive Z"
+- Either screen has a **RESTART** button that resets state. No persistence.
 
-## 6. Open questions for the human
+## 7. Controls
 
-### Answered
+- `SPACE` — toggle pause. All simulation time stops; UI stays interactive.
+- Click a crew portrait, then click a room → assign crew to room
+- Click `+`/`−` on a system → move a reactor power bar in/out
+- Click an enemy room → set weapon target
+- The game starts **paused** at the beginning of every combat
 
-1. ~~How many rooms?~~ **Six**, per §2. Reactor and Cargo carry no system.
-2. ~~How many weapons?~~ **Two**, per §3.
+## 8. Determinism
 
-### Still open
+All randomness goes through one seeded `RandomNumberGenerator` owned by the run.
+The seed is printed on screen. No calls to global `randi()` / `randf()` anywhere.
+This is what makes the headless sim runner and bug reproduction possible.
 
-3. **Does damage hit hull and system, or one or the other?** §3 assumes both,
-   because v0.2 §7 needs a struck room for fire to start in and because
-   hull-or-system makes targeting a strictly worse decision. Proceeding on that
-   assumption unless corrected.
-4. **Is the medical room present-but-empty in v0.1, or added in v0.2?**
-   §2 assumes present-but-empty, so the layout file never changes shape.
-   Proceeding on that assumption unless corrected.
+## 9. Acceptance criteria
 
-### Superseding this document
+v0.1 is done when all of these are true:
 
-If the original v0.1 file turns up, it wins. Diff it against this and correct
-the differences rather than rewriting — the sections most likely to be wrong are
-§3 hit resolution and the enemy AI, which are pure inference.
+1. `godot --headless --quit` exits with code 0 and no script errors
+2. Launching the game shows encounter 1, paused, with all HUD elements visible
+3. A human can complete all 5 encounters without touching the console
+4. Pause actually stops weapon charge, shield recharge, and repair progress
+5. Moving power to Shields visibly changes shield layers within 5 seconds
+6. Crew death is possible and does not crash the game
+7. `godot --headless --script res://tools/sim_runner.gd -- --runs 200` completes
+   with zero crashes and prints a win rate
+8. Target win rate for the random-play sim runner: between 5% and 40%.
+   Outside that range, report it — do not silently retune the numbers.

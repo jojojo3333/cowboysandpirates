@@ -21,7 +21,8 @@ if [[ ! -x "$GODOT" ]]; then
   exit 127
 fi
 
-SIM_RUNS="${SIM_RUNS:-500}"
+# v0.1 acceptance criterion 7 asks for 200 runs; v0.2 §10.9 raises it to 500.
+SIM_RUNS="${SIM_RUNS:-200}"
 FAILED=0
 
 hdr() { printf '\n\033[1m== %s\033[0m\n' "$1"; }
@@ -63,12 +64,14 @@ verify_sim() {
     echo "$out" | tail -30
     if [[ $rc -eq 0 ]]; then ok "test suite"; else bad "test suite"; fi
   else
-    skip "test suite — tests/ is empty (Phase 1 has not started)"
+    skip "test suite — tests/ is empty (optional; sim_runner is the required harness)"
   fi
 
-  if [[ -f sim/sim_runner.gd ]]; then
+  # Path and flag spelling come from GAME_SPEC_v0.1 acceptance criterion 7:
+  #   godot --headless --script res://tools/sim_runner.gd -- --runs 200
+  if [[ -f tools/sim_runner.gd ]]; then
     local out
-    out="$("$GODOT" --headless --script sim/sim_runner.gd -- --runs="$SIM_RUNS" 2>&1)"
+    out="$("$GODOT" --headless --script res://tools/sim_runner.gd -- --runs "$SIM_RUNS" 2>&1)"
     local rc=$?
     echo "$out" | tail -30
     if [[ $rc -eq 0 ]]; then
@@ -77,7 +80,7 @@ verify_sim() {
       bad "$SIM_RUNS-run balance report"
     fi
   else
-    skip "balance report — sim/sim_runner.gd does not exist yet (Phase 1 has not started)"
+    skip "balance report — tools/sim_runner.gd does not exist yet (slice 4)"
   fi
 }
 

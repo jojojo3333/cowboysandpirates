@@ -37,37 +37,65 @@ phases instead of one supervised slog. See `BUILD_PLAN.md`.
 ## 2. Layout
 
 ```
-sim/                    headless, no scene tree, no Node
+main.tscn               THE ONLY SCENE. One Control node named Main.
+main.gd                 attached to it; builds every UI node in code.
+
+sim/                    plain RefCounted classes. No Node, no Control, no
+                        scene API, no imports from ui/.
   game_state.gd         run state: hull, scrap, encounter index, crew roster
   ship.gd               rooms, systems, power allocation, adjacency
   system.gd             one system: damage, power, manning, repair
-  crew_member.gd        HP, state machine, per-system XP, class lookup
-  combat.gd             the tick: charge, fire, resolve, spread, bleed
-  fire.gd               ignition, damage, spread, extinguish
-  log_event.gd          the structured event object
-  log_bus.gd            append-only event stream, subscribable
+  crew_member.gd        HP, state machine, per-system XP (v0.2), class lookup
+  combat.gd             the tick: charge, fire, resolve
+  fire.gd               ignition, damage, spread, extinguish     [v0.2]
+  log_event.gd          the structured event object              [v0.2]
+  log_bus.gd            append-only event stream, subscribable   [v0.2]
   rng.gd                seeded RNG — every roll goes through this
   data_loader.gd        parses data/*.json into runtime structs
-  sim_runner.gd         headless 500-run harness, prints the §10.9 report
 
-ui/                     scenes, nodes, drawing, input
+ui/                     Control-building code, called from main.gd.
+                        NO .tscn FILES. Ever.
   combat_screen.gd      the ship view
-  log_view.gd           formats LogEvents into coloured text
+  log_view.gd           formats LogEvents into coloured text     [v0.2]
   crew_panel.gd         portraits, HP, XP, state
   jump_screen.gd        repair / upgrade between encounters
 
 data/                   content. no logic.
-  classes.json          class definitions and bonus keys
-  crew.json             the six starting crew
-  ship_layout.json      rooms, systems, adjacency        [Phase 1]
-  enemies.json          six encounter templates          [Phase 1]
+  classes.json          class definitions and bonus keys         [v0.2]
+  crew.json             the starting crew                        [v0.2]
+  ship_layout.json      rooms, systems, adjacency                [slice 0]
+  enemies.json          encounter templates                      [slice 3]
+  weapons.json          charge time, power cost, shots, damage   [slice 0]
 
-tests/                  headless GUT/GdUnit specs against sim/ only
-tools/                  setup_godot.sh, verify.sh
+tests/                  optional headless specs against sim/ only
+tools/
+  setup_godot.sh        fetches the pinned engine
+  verify.sh             the two verify commands
+  validate_data.gd      data contract checks
+  sim_runner.gd         headless balance harness                 [slice 4]
 ```
 
-`ui/` filenames are indicative; Phase 2 may reshape them. `sim/` filenames are
-not — tests and the balance harness key off them.
+**`tools/sim_runner.gd`, not `sim/sim_runner.gd`.** The path is fixed by
+`GAME_SPEC_v0.1` acceptance criterion 7, which spells the invocation out:
+`godot --headless --script res://tools/sim_runner.gd -- --runs 200`.
+
+`ui/` filenames are indicative and may be reshaped. `sim/` and
+`tools/sim_runner.gd` are not — the harness and the verify script key off them.
+
+### The one-scene rule
+
+`main.tscn` is the only scene file in the project. Every Control is constructed
+in GDScript at runtime. This is `CLAUDE.md` constraint 1 and it exists because
+hand-edited `.tscn` files are the thing an agent most reliably corrupts: they
+are line-oriented, position-sensitive, and a bad merge produces a project that
+opens to a blank screen with no error.
+
+### Pause
+
+The simulation owns `time_scale: float`, 0.0 or 1.0. Every tick multiplies by
+it. **Never `get_tree().paused`** — that freezes UI input too, so the player
+cannot give orders while paused, which is how this game is meant to be played.
+`_process` keeps running; the simulation does not.
 
 ---
 
@@ -101,7 +129,7 @@ Consumers, in order of arrival:
 | Consumer | Version | Reads |
 |----------|---------|-------|
 | `ui/log_view.gd` | v0.2 | everything, formats to coloured text |
-| `sim/sim_runner.gd` | v0.2 | counts deaths, clone restores, encounter index |
+| `tools/sim_runner.gd` | v0.2 | counts deaths, clone restores, encounter index |
 | bark system | v0.4 | a subset, per `VOICE_AND_EVENTS.md §4` |
 
 **No consumer may mutate an event.** The stream is the record of what happened.

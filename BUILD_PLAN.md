@@ -1,19 +1,34 @@
 # BUILD_PLAN.md
 
-How this gets built: two autonomous phases with one human checkpoint between
-them. Written down because the failure mode of long agent runs is trying to
-build everything at once and running out of context halfway.
+What gets built, in what order, and the places where v0.1 and v0.2 contradict
+each other and need a decision.
 
 ---
 
-## Why two phases and not one
+## v0.1 — follow `SLICE.md`
 
-The specs are unusually well suited to autonomous work, for a reason that was
-probably not deliberate: **`GAME_SPEC_v0.2 §10` is a verification contract.**
-Nine of its ten acceptance criteria are machine-checkable.
+`SLICE.md` is the build order and it is better than anything invented later:
+five slices, each ending in a running clickable game, each with a time target.
+**Do not replace it with a phase plan.** Slice 0 is the current slice.
 
-| # | Criterion | Checkable headless? |
-|---|-----------|---------------------|
+The one thing worth adding: slices 0–3 are all human-verifiable only. The
+machine-checkable harness is slice 4 (`tools/sim_runner.gd`), which is scheduled
+last. That is the right order for a human building it, and the wrong order for
+an agent building it unattended, because slices 0–3 then run with nothing but
+the boot check to catch regressions.
+
+**If v0.1 is built autonomously, pull slice 4 forward to slice 1.** A sim runner
+that plays randomly needs no UI, and once it exists every later slice gets a
+free regression check. If v0.1 is built with a human at the keyboard, leave the
+order as written.
+
+## v0.2 — two phases
+
+`GAME_SPEC_v0.2 §10` is a verification contract, probably by accident. Nine of
+its ten acceptance criteria are machine-checkable:
+
+| # | Criterion | Headless? |
+|---|-----------|-----------|
 | 1 | Both verify commands green | ✅ |
 | 2 | A human can complete a full 6-combat run | ❌ **human** |
 | 3 | Downed → revived → later dies permanently | ✅ |
@@ -22,98 +37,106 @@ Nine of its ten acceptance criteria are machine-checkable.
 | 6 | TOCK repairable by Vela and nobody else | ✅ |
 | 7 | Seventh class requires JSON only | ✅ |
 | 8 | Nothing communicated by colour or animation alone | ✅ ¹ |
-| 9 | 500 games, zero crashes, five metrics reported | ✅ |
+| 9 | 500 games, zero crashes, five metrics | ✅ |
 | 10 | Win rate 15–35%, reported not retuned | ✅ |
 
-¹ Checkable as written, because the rule reduces to "every state change emits a
-`LogEvent`" — assert the event stream contains one per state transition.
+¹ Reduces to "every state change emits a `LogEvent`" — assert the event stream
+contains one per state transition.
 
-An agent can therefore prove nine of ten to itself and iterate without a human
-in the loop. **Criterion 2 is the checkpoint, and it is the whole reason there
-are two phases rather than one.** No amount of green tests establishes that the
-game is worth playing.
+So an agent can prove nine of ten to itself. **Criterion 2 is the checkpoint.**
+No amount of green tests establishes that the game is worth playing, and CI
+containers render over software rasterisation, which is enough for correctness
+and useless for judging feel.
 
-## What the container can and cannot judge
-
-Godot 4.7 runs headless here over software rasterisation. That is enough to
-prove correctness and nowhere near enough to judge feel: framerate is not
-representative, and no screenshot answers whether a fight is tense.
-
-**Correctness is delegated. Feel is not delegable.** Every phase boundary below
-sits exactly on that line.
+Phase A: the sim layer — classes, crew states, XP, medical slot, fire, the
+structured log. Phase B: the UI for all of it, plus the human run.
 
 ---
 
-## Phase 1 — v0.1, "The Loop"
+## v0.1 → v0.2 deltas
 
-**Target:** `GAME_SPEC_v0.1.md`. Ends playable.
+v0.2 was written without v0.1 in front of it, and it shows. Most of these are
+ordinary version-to-version growth. Three are contradictions that need a call.
 
-Deliverables:
-- All of `sim/` for v0.1: ship, systems, power, shields, evasion, weapons,
-  charge, hit resolution, crew manning and repair, enemy AI, encounter chain
-- `data/ship_layout.json`, `data/enemies.json`
-- Minimal `ui/`: grey rectangles, power bars, crew dots, target selection,
-  jump screen. **No art. The spec forbids it and it would be thrown away.**
-- `tests/` covering the sim, and `sim/sim_runner.gd` with seed reproducibility
-- `tools/verify.sh` green on both commands
+### Ordinary growth — no decision needed
 
-Exit condition: **a human plays five encounters end to end.**
+| Thing | v0.1 | v0.2 |
+|-------|------|------|
+| Crew count | 3 | 6 |
+| Crew names | Smith, Vasquez, Okonkwo (explicitly placeholder) | Smith, Ostrow, Vela, Mazur, Kwon, TOCK |
+| Manning bonus | +10% flat | +20% at L1, +35% at L2, by per-system XP |
+| Repair rate | 1 damage / 4s | same, but Engineer does 2 points per tick |
+| Crew death | immediate and permanent | ACTIVE → DOWNED (30s bleed) → DEAD |
+| Medbay | a system, max_power 2, 4 HP/s | one medical slot: Medbay **or** Clone Bay, same 4 HP/s per bar |
+| Enemy ship | no power management, random targeting | unchanged, but enemies burn too |
+| Sim runner | 200 runs, target 5–40% | 500 runs, target 15–35% |
 
-**Blocked on:** the four open questions in `GAME_SPEC_v0.1.md §6`. They are
-structural, and guessing wrong means rebuilding the ship model in Phase 2.
+The Medbay numbers match exactly across both specs. That is the one place the
+two documents were clearly written with each other in view.
 
-### Checkpoint — the only part that needs you
+### Contradiction 1 — how many rooms
 
-After Phase 1, play it and answer three things. Nothing else is asked of you.
+**v0.1 §4 specifies four systems, and `SLICE.md` slice 0 says "4 rooms per
+ship".** Before the v0.1 file surfaced, six rooms were agreed — Reactor and
+Cargo added as systemless rooms that burn — on the argument that a ship where
+every room is critical makes fire a timer rather than a spatial decision.
 
-1. Is the fight interesting with no crew layer at all? If not, v0.2 will not
-   save it — the crew layer amplifies a good fight and cannot manufacture one.
-2. The `[PLAY-GATED]` numbers: which are wrong, and in which direction? Direction
-   is enough. Do not supply values.
-3. Are five encounters too many or too few for one sitting?
+That argument still holds, but it is a v0.2 argument: fire does not exist in
+v0.1, so the two extra rooms would be inert.
 
-## Phase 2 — v0.2, "The Crew Layer"
+**Recommendation: build v0.1 with four rooms as specced. Expand to six in v0.2,
+in the same slice that adds fire.** `data/ship_layout.json` gains two entries
+and an adjacency list; nothing else changes. The 2×3 grid stands as the v0.2
+target layout:
 
-**Target:** `GAME_SPEC_v0.2.md`, which is authoritative and needs no
-reconstruction.
+```
+  Weapons ── Shields ── Medical
+     │          │          │
+  Reactor ── Engines ──  Cargo
+```
 
-Deliverables:
-- Classes from `data/classes.json`, zero class logic in GDScript
-- Crew states: ACTIVE / DOWNED / DEAD, and ACTIVE / DISABLED / DESTROYED
-- Per-system crew XP, and its destruction by cloning
-- The medical slot: Medbay **or** Clone Bay, `F1` to toggle in dev
-- Fire: ignition, spread over adjacency, crew damage, extinguishing
-- The structured combat log — `LogEvent` from day one, never strings
-- Encounters 5 → 6
-- Balance report split by medical loadout and by TOCK survival (§9)
+### Contradiction 2 — v0.2 deletes the two text events
 
-Exit condition: all ten acceptance criteria, with criterion 2 verified by you.
+**v0.1 encounter 2 is a Distress beacon and encounter 4 is a Derelict hauler,
+both with choices and consequences. `GAME_SPEC_v0.2 §8` replaces the run with
+"6 combats, all fights, no events."**
 
-## Not in either phase
+Read literally, v0.2 deletes two working features to make room for fire and
+crew death. That may well be deliberate — the stated reason is that fire and
+crew death need room to play out, which is a real argument.
 
-`SETTING.md` is a v0.3 document and `VOICE_AND_EVENTS.md` is a v0.4 document.
-They are in the repo as constraints, not as work. **Only `VOICE_AND_EVENTS.md §6`
-is built now** — structured log events — and it is folded into Phase 2 where it
-belongs rather than being a phase of its own.
+But `VOICE_AND_EVENTS.md §2` uses `derelict_hauler` as *the* worked example of
+the v0.4 event format, line pools and all. Deleting the v0.1 implementation and
+rebuilding it in v0.4 is throwing away the only event code that will ever have
+been playtested.
 
-Nothing in `GAME_SPEC_v0.2 §3` gets built early because it seemed easy.
+**Recommendation: keep both events implemented, behind a flag that v0.2 turns
+off.** The v0.2 run is six combats as specced; the event code stays in the tree
+and is the seed of the v0.4 system rather than a rewrite.
+
+### Contradiction 3 — is crew XP in v0.1 or v0.2
+
+**`SLICE.md` slice 2 includes "Crew XP: 1 per 5s manning; at 20 XP the bonus
+doubles to +20%". `GAME_SPEC_v0.1 §4` does not mention XP at all.
+`GAME_SPEC_v0.2 §5` introduces it as new.**
+
+The slice plan pulled a v0.2 feature into v0.1.
+
+**Recommendation: drop XP from slice 2.** v0.1's job is to prove the loop is fun
+with interchangeable crew; XP is the first mechanic that makes a *specific* crew
+member irreplaceable, which is exactly what v0.2 §0 says v0.2 is for. Building
+it early muddies what v0.1 is supposed to answer.
 
 ---
 
-## Rules for the agent running a phase
+## Rules for an agent running unattended
 
-1. **Commit at every green checkpoint.** A phase is hours of work; an
-   uncommitted context overflow loses all of it. Commit when both verify
-   commands pass, every time, with a message naming what now works.
-2. **Never weaken a test to make it pass.** Converting a failing assertion into
-   a skip, widening a tolerance, or deleting a case is the documented way these
-   runs go wrong. If a test is wrong, say so in the commit message and explain
-   why — do not silently adjust it.
-3. **Report `[PLAY-GATED]` numbers, never tune them.** If the 500-run report
-   says the win rate is 4%, that is the deliverable. Retuning quietly destroys
-   the only signal the checkpoint has.
-4. **Stop at the phase boundary.** Do not start Phase 2 because Phase 1 finished
-   early and the context still has room.
-5. **If an inference in `GAME_SPEC_v0.1.md` turns out to be unbuildable, stop and
-   say so.** Do not invent a workaround for a spec that a human can correct in
-   one sentence.
+1. **Commit at every green checkpoint** — one slice per commit, per `CLAUDE.md`.
+   An uncommitted context overflow loses hours.
+2. **Never weaken a test to make it pass.** Converting a failing assertion into a
+   skip, widening a tolerance, or deleting a case is the documented way these
+   runs go wrong. If a test is wrong, say so; do not silently adjust it.
+3. **Report `[PLAY-GATED]` numbers, never tune them.**
+4. **Stop at the slice boundary**, even with context left.
+5. **If the spec is ambiguous, stop and ask.** Do not invent a workaround for
+   something a human can settle in one sentence.
