@@ -1,0 +1,63 @@
+{
+  "_comment": "Starting crew. Each entry references a class id from classes.json. Names and flavour text are content and may change freely; ids must not, because save data and event scripts key off them.",
+
+  "_naming_rule": "Two syllables where possible, hard consonants, spellable on first hearing, and it must survive being shouted across a burning room. Distinct initials so portraits are not confused under pressure. Origin may be anything; pronunciation may not be difficult.",
+
+  "_voice_rule": "Flavour text encodes voice, not biography. It is what gets read when dialogue is written in v0.4. Keep it to what a person sounds like and what they will not say.",
+
+  "crew": [
+    {
+      "id": "smith",
+      "name": "Smith",
+      "true_name": "Cassian Roth",
+      "class": "commander",
+      "reveals_true_name": false,
+      "flavour": "Gives his real name only to the core of the crew, and has not yet decided who that is. Answers to Captain. Answers to Smith. Does not answer to Roth.",
+      "starting_room": "weapons"
+    },
+    {
+      "id": "ostrow",
+      "name": "Bram Ostrow",
+      "class": "soldier",
+      "flavour": "Old enough that the stories have stopped being interesting to him. Has outlived everyone who could confirm any of them. Unhurried in a way that reads as calm right up until it doesn't.",
+      "starting_room": "shields"
+    },
+    {
+      "id": "vela",
+      "name": "Juno Vela",
+      "class": "engineer",
+      "flavour": "Knows the ship better than the ship's own diagnostics do. Considers this a low bar. Has never once said a system was fine when it was not. The only person aboard who can put TOCK back together, and the only person who talks to him like furniture.",
+      "starting_room": "engines"
+    },
+    {
+      "id": "mazur",
+      "name": "Dex Mazur",
+      "class": "pilot",
+      "flavour": "Certain he is the best pilot on this ship, which is true, and the best pilot in the system, which is not. Nobody has felt the need to correct him yet.",
+      "starting_room": "engines"
+    },
+    {
+      "id": "kwon",
+      "name": "Sunny Kwon",
+      "class": "medic",
+      "flavour": "The name is a joke somebody made a long time ago and she kept. Treats a body as an engineering problem with a shorter deadline. Has strong opinions about the Clone Bay and has not shared them.",
+      "starting_room": "medical"
+    },
+    {
+      "id": "tock",
+      "name": "TOCK",
+      "designation": "TK-04",
+      "class": "synthetic",
+      "flavour": "Named for the sound the old chassis made. Answers questions completely and literally, including the rhetorical ones. Delivers catastrophic news in the same register as the time. Has never made a joke and is regularly the funniest thing aboard.",
+      "starting_room": "weapons"
+    }
+  ],
+
+  "_reserve_pool_v0_3": [
+    "Yaro Voss",
+    "Silas Tarn",
+    "Mika Sato",
+    "Nell Kovic",
+    "Nico Vale"
+  ]
+}

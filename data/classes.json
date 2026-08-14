@@ -1,0 +1,83 @@
+{
+  "_comment": "Class definitions. Adding a class here must require ZERO GDScript changes - that is a v0.2 acceptance criterion. The Synthetic class was added after the format was written and is the live proof of that. The bonuses dict is deliberately sparse: the format carries far more than v0.2 populates.",
+
+  "_bonus_keys": {
+    "repair_speed_mult": "multiplier on this crew member's own repair rate",
+    "repair_speed_mult_others": "multiplier on ALL OTHER crew's repair rate while this one is alive",
+    "repair_points_per_tick": "damage points removed per repair interval (default 1)",
+    "firefight_speed_mult": "multiplier on extinguish speed",
+    "fire_damage_taken_mult": "multiplier on fire damage taken by this crew member",
+    "evasion_flat_bonus": "flat percentage of evasion added while manning Engines",
+    "medbay_heal_mult": "multiplier on Medbay heal rate while manning it",
+    "man_bonus_mult": "multiplier on this crew member's manning bonus",
+    "weapon_charge_mult": "multiplier on charge speed of weapons in this room",
+    "max_hp": "override for starting max HP",
+    "can_repair_synthetics": "may restore a DISABLED synthetic by standing in its room",
+    "hack_skill": "v0.3 only - intrusion capability, unused in v0.2"
+  },
+
+  "classes": [
+    {
+      "id": "commander",
+      "label": "Commander",
+      "description": "The captain. One per ship. Cannot be replaced or dismissed.",
+      "unique": true,
+      "is_synthetic": false,
+      "bonuses": {
+        "repair_speed_mult_others": 1.25
+      }
+    },
+    {
+      "id": "soldier",
+      "label": "Soldier",
+      "description": "Fighter. There is nothing to fight yet - boarding arrives in v0.3. Deliberately the weakest class in v0.2. Do not invent compensating mechanics.",
+      "unique": false,
+      "is_synthetic": false,
+      "bonuses": {
+        "firefight_speed_mult": 1.25,
+        "fire_damage_taken_mult": 0.5
+      }
+    },
+    {
+      "id": "engineer",
+      "label": "Engineer",
+      "description": "Keeps it flying. The only class that can restore a disabled synthetic.",
+      "unique": false,
+      "is_synthetic": false,
+      "bonuses": {
+        "repair_points_per_tick": 2,
+        "can_repair_synthetics": true
+      }
+    },
+    {
+      "id": "pilot",
+      "label": "Pilot",
+      "description": "Mans Engines. Turns reactor power into not being hit.",
+      "unique": false,
+      "is_synthetic": false,
+      "bonuses": {
+        "evasion_flat_bonus": 5
+      }
+    },
+    {
+      "id": "medic",
+      "label": "Medic",
+      "description": "Mans the medical slot. Worth far less on a ship that installed a Clone Bay - intentional, and part of the cost of that choice. Do not soften it.",
+      "unique": false,
+      "is_synthetic": false,
+      "bonuses": {
+        "medbay_heal_mult": 1.5
+      }
+    },
+    {
+      "id": "synthetic",
+      "label": "Synthetic",
+      "description": "Combat frame with an intrusion suite. Does not bleed out and does not die on a timer - at 0 HP it goes DISABLED and waits. Cannot be healed by a Medbay or restored by a Clone Bay; only an Engineer can bring it back. Its XP is never lost, because there is no pattern to reset. Hacking is v0.3.",
+      "unique": false,
+      "is_synthetic": true,
+      "bonuses": {
+        "hack_skill": 0
+      }
+    }
+  ]
+}

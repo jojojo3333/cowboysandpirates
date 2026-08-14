@@ -1,0 +1,16 @@
+; Godot project file. Engine version is pinned in tools/setup_godot.sh.
+; GL Compatibility renderer, because the CI container has no GPU and falls back
+; to software rasterisation. See CLAUDE.md.
+
+config_version=5
+
+[application]
+
+config/name="Cowboys and Pirates"
+config/description="Sol, 2100. A gold rush in its second decade."
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"

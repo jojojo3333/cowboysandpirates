@@ -1,0 +1,15 @@
+# Pinned engine binary, fetched by tools/setup_godot.sh
+.godot-bin/
+
+# Godot's import cache and editor state
+.godot/
+*.import
+export_presets.cfg
+
+# Build output
+build/
+*.zip
+
+# OS noise
+.DS_Store
+Thumbs.db
