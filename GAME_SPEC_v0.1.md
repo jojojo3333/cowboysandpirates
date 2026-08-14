@@ -37,8 +37,8 @@ rooms; pathfinding is not in scope.
 
 ## 2. The ship
 
-**[INFERRED]** Four rooms, one system each, plus a reactor that is a number
-rather than a room.
+**Six rooms** — decided, not inferred. Four carry a system; two carry none and
+exist to be walked through and, from v0.2, to burn.
 
 | Room | System | Effect |
 |------|--------|--------|
@@ -46,11 +46,33 @@ rather than a room.
 | Shields | Shields | Each 2 power = 1 shield layer. |
 | Engines | Engines | Converts power into evasion %. |
 | Medical | — | **Empty in v0.1.** Exists in the layout so v0.2 §6 can fill it. |
+| Reactor | — | No system. Holds crew, and burns. |
+| Cargo | — | No system. Holds crew, and burns. |
 
-`data/ship_layout.json` defines rooms, their system, and an adjacency list.
-**[INFERRED]** Adjacency is unused in v0.1 — it exists because v0.2 §7 fire
-spread requires it, and retrofitting the layout file later means touching
-every room definition twice.
+The two systemless rooms are inert in v0.1 on purpose. They are here so that
+`data/ship_layout.json` never changes shape: v0.2 §7 fire needs somewhere to
+spread that is not immediately catastrophic, and a ship where every room is
+critical makes fire a timer rather than a spatial decision.
+
+### Layout
+
+A 2×3 grid. Adjacency is what fire spreads along in v0.2, so the shape matters
+more than it appears to in v0.1, where nothing reads it.
+
+```
+  Weapons ── Shields ── Medical
+     │          │          │
+  Reactor ── Engines ──  Cargo
+```
+
+Adjacency pairs: Weapons–Shields, Shields–Medical, Reactor–Engines,
+Engines–Cargo, Weapons–Reactor, Shields–Engines, Medical–Cargo.
+
+Multiple paths between rooms is deliberate. A pure chain makes fire spread
+predictable and therefore uninteresting.
+
+`data/ship_layout.json` defines rooms, their system, and this adjacency list.
+Phase 1 creates the file; this table is its contract.
 
 ### Power
 - Reactor has a pool of total power bars. Starting pool: **6 [PLAY-GATED]**.
@@ -84,8 +106,14 @@ games far faster than real time and get identical results.
 ### Weapons
 **[INFERRED]** Weapons are charge-and-fire, not hitscan or projectile-travel.
 
+**The starting ship carries two weapons** — decided, not inferred. Two is the
+number that makes the Weapons power allocation a choice: when power is short you
+must decide which of the two charges, and that decision is most of what makes
+the Weapons room worth defending.
+
 - Each weapon has a charge time, a damage value, and a shield-piercing value.
-- A weapon charges only while the Weapons system has power for it.
+- Each weapon costs power. A weapon charges only while the Weapons system has
+  power allocated to its slot.
 - On fire, the player has selected a target room. **[PLAY-GATED]** If no room is
   selected, it targets a random powered room.
 
@@ -165,15 +193,23 @@ Surviving all five encounters wins the run.
 
 ## 6. Open questions for the human
 
-Answer these before Phase 1 builds on them — they are the inferences that would
-be expensive to reverse:
+### Answered
 
-1. **Four rooms, or more?** Four is the minimum that `crew.json` starting rooms
-   imply. A larger ship makes fire spread (v0.2 §7) more interesting and makes
-   targeting a real decision. Recommend six: add Reactor and Cargo as rooms that
-   can burn but hold no combat system.
-2. **How many weapons does the starting ship carry?** Two is the FTL default and
-   makes the Weapons power decision meaningful. Currently unspecified anywhere.
-3. **Does damage hit hull and system, or one or the other?** §3 assumes both.
+1. ~~How many rooms?~~ **Six**, per §2. Reactor and Cargo carry no system.
+2. ~~How many weapons?~~ **Two**, per §3.
+
+### Still open
+
+3. **Does damage hit hull and system, or one or the other?** §3 assumes both,
+   because v0.2 §7 needs a struck room for fire to start in and because
+   hull-or-system makes targeting a strictly worse decision. Proceeding on that
+   assumption unless corrected.
 4. **Is the medical room present-but-empty in v0.1, or added in v0.2?**
-   Present-but-empty means the layout file never changes shape.
+   §2 assumes present-but-empty, so the layout file never changes shape.
+   Proceeding on that assumption unless corrected.
+
+### Superseding this document
+
+If the original v0.1 file turns up, it wins. Diff it against this and correct
+the differences rather than rewriting — the sections most likely to be wrong are
+§3 hit resolution and the enemy AI, which are pure inference.
