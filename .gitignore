@@ -4,7 +4,10 @@
 # Godot's import cache and editor state
 .godot/
 *.import
-export_presets.cfg
+
+# export_presets.cfg is deliberately NOT ignored. It is usually treated as
+# local editor state, but CI cannot export without it, and the web build is
+# produced by CI. It carries no secrets.
 
 # Build output
 build/

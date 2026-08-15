@@ -9,11 +9,27 @@ digging. You are a smuggler with a small ship and six people who depend on you.
 The design goal is one sentence: **losing a crew member has to cost you
 something.**
 
-## Getting started
+## Play it
+
+**In a browser** — pushes to `main` or `claude/**` publish to GitHub Pages via
+`.github/workflows/web.yml`. Nothing to install.
+
+**On your own machine** — download [Godot 4.7 stable](https://godotengine.org/download),
+a single binary with no installer, then open `project.godot` and press **F5**.
+On macOS the first launch needs right-click → Open, or Gatekeeper refuses it.
+There is nothing to import and no dependencies: every asset in this project is
+a coloured rectangle drawn at runtime.
+
+Both are the same build. The web export is an additional target, not a fork —
+Godot exports Windows, macOS, Linux and Web from this one project, which is
+what keeps a Steam release available later.
+
+## Working on it
 
 ```bash
-tools/setup_godot.sh     # fetches the pinned Godot 4.7 into .godot-bin/
-tools/verify.sh          # both verify commands; must be green before any commit
+tools/setup_godot.sh          # fetches the pinned Godot 4.7 into .godot-bin/
+tools/verify.sh               # both verify commands; green before any commit
+tools/build_web.sh --serve    # web export on http://127.0.0.1:8099
 ```
 
 ## Where to look
