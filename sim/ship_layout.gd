@@ -33,6 +33,41 @@ func are_adjacent(a: String, b: String) -> bool:
 	return room.is_adjacent_to(b)
 
 
+# Shortest route from one room to another as a list of rooms to enter, excluding
+# the starting room and including the destination. Empty if unreachable.
+#
+# GAME_SPEC_v0.1 §2 rules pathfinding out of scope, on the assumption that crew
+# teleport. They no longer do, and a player who has to click each room in turn
+# is performing the pathfinding by hand — which is exactly what made movement
+# read as hopping between boxes rather than walking through a ship.
+func path(from_id: String, to_id: String) -> Array[String]:
+	var empty: Array[String] = []
+	if from_id == to_id or not has_room(from_id) or not has_room(to_id):
+		return empty
+
+	var came_from: Dictionary = {from_id: ""}
+	var queue: Array[String] = [from_id]
+
+	while not queue.is_empty():
+		var current: String = queue.pop_front()
+		if current == to_id:
+			var route: Array[String] = []
+			var node: String = to_id
+			while node != from_id:
+				route.push_front(node)
+				node = str(came_from[node])
+			return route
+		var room: ShipRoom = get_room(current)
+		if room == null:
+			continue
+		for neighbour: String in room.adjacent:
+			if not came_from.has(neighbour):
+				came_from[neighbour] = current
+				queue.append(neighbour)
+
+	return empty
+
+
 # Symmetry check for the validator: if A lists B, B must list A. An asymmetric
 # adjacency list produces a room fire can enter and not leave, which is the kind
 # of bug that only shows up once v0.2 exists.

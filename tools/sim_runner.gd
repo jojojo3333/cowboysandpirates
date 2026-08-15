@@ -119,47 +119,21 @@ func _play_once(plan: String, seed_in: int) -> Dictionary:
 	}
 
 
-# Plays the scene the way a competent player would: walk to the hold, then cut
-# everyone loose in roster order.
+# Plays the scene the way a competent player would: order one walk to the hold,
+# then cut everyone loose in roster order. The runner no longer paths by hand —
+# ShipLayout.path() does it, which is the same code the player's clicks use.
 func _issue_next_order(scene: RescueScene) -> void:
 	var hold: String = str(scene.config.get("captives_room", "cargo"))
 
-	if scene.tock.room == hold:
-		for m: CrewMember in scene.crew:
-			if m.is_tied():
-				scene.order_free(m.id)
-				return
+	if scene.tock.room != hold:
+		scene.order_move(hold)
 		return
 
-	var step: String = _next_hop(scene.layout, scene.tock.room, hold)
-	if step != "":
-		scene.order_move(step)
+	for m: CrewMember in scene.crew:
+		if m.is_tied():
+			scene.order_free(m.id)
+			return
 
-
-# Breadth-first over the adjacency list. The runner is allowed to path-find;
-# the player is not, because GAME_SPEC_v0.1 §2 rules pathfinding out of scope
-# and the UI only ever offers adjacent rooms.
-func _next_hop(layout: ShipLayout, from_id: String, to_id: String) -> String:
-	if from_id == to_id:
-		return ""
-	var queue: Array[String] = [from_id]
-	var came_from: Dictionary = {from_id: ""}
-
-	while not queue.is_empty():
-		var current: String = queue.pop_front()
-		if current == to_id:
-			var node: String = to_id
-			while str(came_from[node]) != from_id and str(came_from[node]) != "":
-				node = str(came_from[node])
-			return node
-		var room: ShipRoom = layout.get_room(current)
-		if room == null:
-			continue
-		for neighbour: String in room.adjacent:
-			if not came_from.has(neighbour):
-				came_from[neighbour] = current
-				queue.append(neighbour)
-	return ""
 
 
 func _arg_int(flag: String, fallback: int) -> int:

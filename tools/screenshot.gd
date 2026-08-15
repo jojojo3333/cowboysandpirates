@@ -47,9 +47,9 @@ func _init() -> void:
 	await _shot(out_prefix + "-2b-walking.png")
 	await _run_seconds(sim, 1.7)
 
-	# Then on to the hold, so arrival, the firefight and the crew slots are
-	# exercised too.
-	await _advance(sim, ["medbay", "cargo"])
+	# Then one order for the whole remaining route, the way a player gives it.
+	sim.order_move("cargo")
+	await _run_seconds(sim, 7.0)
 	await _shot(out_prefix + "-3-in-the-hold.png")
 
 	for m: CrewMember in sim.crew:
@@ -61,11 +61,6 @@ func _init() -> void:
 
 	quit(0)
 
-
-func _advance(sim: RescueScene, route: Array) -> void:
-	for step: Variant in route:
-		sim.order_move(str(step))
-		await _run_seconds(sim, 3.2)
 
 
 func _run_seconds(sim: RescueScene, seconds: float) -> void:

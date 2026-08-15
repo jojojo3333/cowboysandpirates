@@ -26,10 +26,10 @@ DISABLED in the fight, so they left him where he fell — which is why he is the
 only one loose. He reboots, states the situation, and proposes two ways out:
 cut the boarders' suit oxygen, or take the weapons cached in the hold and fight.
 
-- 6 rooms as grey rectangles, from `data/ship_layout.json`. Adjacency is real:
-  TOCK moves one adjacent room at a time and each hop costs time.
-- 5 crew TIED in the cargo hold. Click a room to move TOCK, click a captive to
-  cut them loose.
+- 6 rooms drawn top-down as one connected hull, from `data/ship_layout.json`.
+  Walls carry a door exactly where the adjacency list says two rooms connect.
+- 5 crew TIED in the cargo hold. Click any reachable room and TOCK walks the
+  whole route through the rooms between; click a captive to cut them loose.
 - Two plans with genuinely different outcomes. Hack: nobody aboard is hurt.
   Fight: everyone ends at 75 HP, including the people who were still tied,
   because a firefight in the hold does not care who is restrained.

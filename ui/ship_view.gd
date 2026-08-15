@@ -16,7 +16,15 @@ signal crew_clicked(crew_id: String)
 
 const CELL_MIN: Vector2 = Vector2(150.0, 118.0)
 const CELL_MAX: Vector2 = Vector2(300.0, 230.0)
-const GAP: float = 34.0
+
+# Rooms tile flush against each other. They used to be separated by a gap, and
+# six free-floating rectangles read as six boxes rather than as one ship — the
+# first thing a human said after playing it.
+const GAP: float = 0.0
+const HULL_PAD: float = 15.0
+const PROW: float = 62.0
+const STERN: float = 30.0
+const DOOR: float = 0.34
 const CREW_RADIUS: float = 15.0
 const CREW_HIT_RADIUS: float = 20.0
 const SLOTS_PER_ROW: int = 3
@@ -26,7 +34,8 @@ const COL_ROOM: Color = Color(0.17, 0.19, 0.23)
 const COL_ROOM_EMPTY: Color = Color(0.14, 0.16, 0.19)
 const COL_EDGE: Color = Color(0.30, 0.34, 0.40)
 const COL_EDGE_REACHABLE: Color = Color(0.55, 0.78, 0.85)
-const COL_CORRIDOR: Color = Color(0.13, 0.15, 0.18)
+const COL_SHELL: Color = Color(0.115, 0.13, 0.155)
+const COL_DOOR: Color = Color(0.34, 0.46, 0.52)
 const COL_LABEL: Color = Color(0.58, 0.63, 0.69)
 const COL_TEXT: Color = Color(0.85, 0.88, 0.91)
 const COL_TIED: Color = Color(0.55, 0.35, 0.32)
@@ -67,11 +76,22 @@ func _load_class_colours() -> void:
 func _cell() -> Vector2:
 	var cols: float = float(maxi(layout.grid_columns, 1))
 	var rows: float = float(maxi(layout.grid_rows, 1))
-	var free: Vector2 = size - Vector2((cols - 1.0) * GAP, (rows - 1.0) * GAP) - Vector2(16.0, 16.0)
+	# The prow and stern stick out past the room block, so they have to come off
+	# the budget before the rooms are sized — otherwise the hull is drawn
+	# outside the control and gets clipped.
+	var chrome: Vector2 = Vector2(
+		2.0 * HULL_PAD + PROW + STERN + 16.0,
+		2.0 * HULL_PAD + 16.0
+	)
+	var free: Vector2 = size - chrome - Vector2((cols - 1.0) * GAP, (rows - 1.0) * GAP)
 	return Vector2(
 		clampf(free.x / cols, CELL_MIN.x, CELL_MAX.x),
 		clampf(free.y / rows, CELL_MIN.y, CELL_MAX.y)
 	)
+
+
+func _hull_size() -> Vector2:
+	return _grid_size() + Vector2(2.0 * HULL_PAD + PROW + STERN, 2.0 * HULL_PAD)
 
 
 func _grid_size() -> Vector2:
@@ -84,8 +104,11 @@ func _grid_size() -> Vector2:
 	)
 
 
+# Centres the hull, not the room block. The two differ by the prow, which is
+# only on one side, so centring the block put the nose off-screen.
 func _recentre() -> void:
-	_origin = ((size - _grid_size()) * 0.5).floor().maxf(8.0)
+	var free: Vector2 = ((size - _hull_size()) * 0.5).maxf(0.0)
+	_origin = (free + Vector2(HULL_PAD + PROW, HULL_PAD)).floor()
 
 
 func _room_rect(room: ShipRoom) -> Rect2:
@@ -177,31 +200,49 @@ func _draw() -> void:
 
 	draw_rect(Rect2(Vector2.ZERO, size), COL_HULL)
 
-	_draw_corridors()
+	_draw_hull()
 	for room: ShipRoom in layout.rooms:
 		_draw_room(room)
+	_draw_walls()
 	if scene.task == RescueScene.Task.TRANSIT:
 		_draw_path()
 	_draw_crew()
 
 
-func _draw_corridors() -> void:
-	# Drawn once per pair. Adjacency is a real rule in this game — fire spreads
-	# along it in v0.2 — so it should be visible rather than implied.
-	var seen: Dictionary = {}
-	for room: ShipRoom in layout.rooms:
-		for other_id: String in room.adjacent:
-			var key: String = room.id + "|" + other_id
-			var mirror: String = other_id + "|" + room.id
-			if seen.has(mirror) or seen.has(key):
-				continue
-			seen[key] = true
-			var other: ShipRoom = layout.get_room(other_id)
-			if other == null:
-				continue
-			var a: Vector2 = _room_rect(room).get_center()
-			var b: Vector2 = _room_rect(other).get_center()
-			draw_line(a, b, COL_CORRIDOR, 18.0)
+func _block() -> Rect2:
+	return Rect2(_origin, _grid_size())
+
+
+# A silhouette around the whole room block, so the ship reads as one object with
+# an outside. Decoration only — nothing here is clickable and the simulation
+# knows nothing about it.
+func _draw_hull() -> void:
+	var b: Rect2 = _block()
+	var x0: float = b.position.x - HULL_PAD
+	var y0: float = b.position.y - HULL_PAD
+	var x1: float = b.end.x + HULL_PAD
+	var y1: float = b.end.y + HULL_PAD
+	var ym: float = b.get_center().y
+
+	var shell: PackedVector2Array = PackedVector2Array([
+		Vector2(x0 - PROW, ym),
+		Vector2(x0, y0),
+		Vector2(x1 - 34.0, y0),
+		Vector2(x1 + STERN, y0 + 26.0),
+		Vector2(x1 + STERN, y1 - 26.0),
+		Vector2(x1 - 34.0, y1),
+		Vector2(x0, y1),
+	])
+	draw_colored_polygon(shell, COL_SHELL)
+	draw_polyline(shell + PackedVector2Array([shell[0]]), COL_EDGE, 2.0)
+
+	# Engine bells, aft.
+	for offset: float in [-46.0, 10.0]:
+		draw_rect(Rect2(Vector2(x1 + STERN - 4.0, ym + offset), Vector2(16.0, 36.0)), COL_SHELL)
+		draw_rect(
+			Rect2(Vector2(x1 + STERN - 4.0, ym + offset), Vector2(16.0, 36.0)),
+			COL_EDGE, false, 2.0
+		)
 
 
 func _draw_room(room: ShipRoom) -> void:
@@ -209,23 +250,60 @@ func _draw_room(room: ShipRoom) -> void:
 	var fill: Color = COL_ROOM if room.system != "" else COL_ROOM_EMPTY
 	draw_rect(rect, fill, true)
 
-	var reachable: bool = (
-		scene.phase == RescueScene.Phase.EXECUTING
-		and scene.task == RescueScene.Task.IDLE
-		and layout.are_adjacent(scene.tock.room, room.id)
-	)
-	var edge: Color = COL_EDGE_REACHABLE if reachable else COL_EDGE
-	draw_rect(rect, edge, false, 2.0 if reachable else 1.0)
+	if _is_target(room.id):
+		draw_rect(rect, COL_EDGE_REACHABLE * Color(1, 1, 1, 0.10), true)
 
 	draw_string(
 		_font, rect.position + Vector2(10.0, 20.0), room.label,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COL_LABEL
 	)
-	if reachable:
-		draw_string(
-			_font, rect.position + Vector2(10.0, rect.size.y - 9.0), "MOVE",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 11, COL_EDGE_REACHABLE
-		)
+
+
+func _is_target(room_id: String) -> bool:
+	return scene.task == RescueScene.Task.TRANSIT and not scene.route.is_empty() \
+		and scene.route[scene.route.size() - 1] == room_id
+
+
+# Interior walls between grid neighbours, with a gap where the adjacency list
+# says there is a door. Where two rooms touch but are not adjacent, the wall is
+# solid — so the drawing and the rule the simulation uses cannot drift apart.
+func _draw_walls() -> void:
+	var cell: Vector2 = _cell()
+	for room: ShipRoom in layout.rooms:
+		var rect: Rect2 = _room_rect(room)
+		var right: ShipRoom = _room_at(room.col + 1, room.row)
+		if right != null:
+			_wall(
+				Vector2(rect.end.x, rect.position.y),
+				Vector2(rect.end.x, rect.end.y),
+				layout.are_adjacent(room.id, right.id)
+			)
+		var below: ShipRoom = _room_at(room.col, room.row + 1)
+		if below != null:
+			_wall(
+				Vector2(rect.position.x, rect.end.y),
+				Vector2(rect.end.x, rect.end.y),
+				layout.are_adjacent(room.id, below.id)
+			)
+	draw_rect(Rect2(_origin, _grid_size()), COL_EDGE, false, 2.0)
+
+
+func _room_at(col: int, row: int) -> ShipRoom:
+	for room: ShipRoom in layout.rooms:
+		if room.col == col and room.row == row:
+			return room
+	return null
+
+
+func _wall(from: Vector2, to: Vector2, has_door: bool) -> void:
+	if not has_door:
+		draw_line(from, to, COL_EDGE, 2.0)
+		return
+	var mid: Vector2 = (from + to) * 0.5
+	var half: Vector2 = (to - from) * (DOOR * 0.5)
+	draw_line(from, mid - half, COL_EDGE, 2.0)
+	draw_line(mid + half, to, COL_EDGE, 2.0)
+	draw_line(mid - half, mid + half, COL_DOOR, 3.0)
 
 
 func _draw_path() -> void:

@@ -31,6 +31,7 @@ var tock: CrewMember = null
 var task: int = Task.IDLE
 var task_remaining: float = 0.0
 var task_target: String = ""
+var route: Array[String] = []
 
 var hack_active: bool = false
 var hack_remaining: float = 0.0
@@ -119,20 +120,46 @@ func choose_plan(plan_id: String) -> bool:
 	return true
 
 
+# Accepts any reachable room, not only a neighbour, and walks the whole route.
+# Ordering a new destination mid-walk re-routes from the room currently being
+# entered, so the player is never made to wait out a hop they no longer want.
 func order_move(room_id: String) -> bool:
-	if phase != Phase.EXECUTING or task != Task.IDLE or tock == null:
+	if phase != Phase.EXECUTING or tock == null:
 		return false
-	if not layout.are_adjacent(tock.room, room_id):
+	if task == Task.FREEING:
 		return false
-	task = Task.TRANSIT
-	task_target = room_id
-	task_remaining = float(_timing().get("transit_seconds", 3.0))
-	_emit("MOVE_ORDERED", LogEvent.NEUTRAL, [tock.id], {"to": room_id})
+
+	var start: String = task_target if task == Task.TRANSIT else tock.room
+	if room_id == start:
+		return false
+
+	var route_to: Array[String] = layout.path(start, room_id)
+	if route_to.is_empty():
+		return false
+
+	route = route_to
+	_emit("MOVE_ORDERED", LogEvent.NEUTRAL, [tock.id], {
+		"to": room_id, "hops": route.size(),
+	})
+	if task != Task.TRANSIT:
+		_begin_hop()
 	return true
+
+
+func _begin_hop() -> void:
+	if route.is_empty():
+		task = Task.IDLE
+		task_target = ""
+		return
+	task = Task.TRANSIT
+	task_target = route[0]
+	task_remaining = float(_timing().get("transit_seconds", 3.0))
 
 
 func order_free(crew_id: String) -> bool:
 	if phase != Phase.EXECUTING or task != Task.IDLE or tock == null:
+		return false
+	if not route.is_empty():
 		return false
 	var m: CrewMember = get_crew(crew_id)
 	if m == null or not m.is_tied():
@@ -235,8 +262,9 @@ func _tick_task(dt: float) -> void:
 	if task == Task.TRANSIT:
 		tock.room = task_target
 		_emit("ARRIVED", LogEvent.NEUTRAL, [tock.id], {"room": task_target})
-		task = Task.IDLE
-		task_target = ""
+		if not route.is_empty():
+			route.pop_front()
+		_begin_hop()
 		_on_arrived()
 	elif task == Task.FREEING:
 		var m: CrewMember = get_crew(task_target)
