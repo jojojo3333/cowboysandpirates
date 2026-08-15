@@ -2,8 +2,15 @@
 
 Provenance record for every imported file, required by `CLAUDE.md` rule 2.
 
-**Currently: none.** Everything on screen is drawn at runtime in
-`ui/ship_view.gd` — rectangles, circles, lines and the engine's fallback font.
+**Currently: three sprites.** Everything structural — hull, nacelles, rooms,
+walls, doors, crew, starfield — is still drawn at runtime in `ui/ship_view.gd`
+from rectangles, polygons, lines and the engine's fallback font. The only
+imported art is the furniture inside rooms, listed below.
+
+That split is deliberate and is expected to hold. In an FTL-like interior view
+the sprite count is small — crew, system icons, furniture — and everything else
+is geometry and lighting. Buying more art does not fix a flat render; it just
+puts art on a flat render.
 
 ## The rule
 
@@ -37,4 +44,34 @@ because collections drift.
 
 | File | Source | Licence | Fetched | Used for |
 |------|--------|---------|---------|----------|
-| — | — | — | — | nothing imported yet |
+| `assets/props/bed-single.png` | Kenney, *Space Station Kit* 1.0 — `Previews/bed-single.png` | CC0 1.0 | 2026-08-15 | Medbay beds |
+| `assets/props/computer.png` | Kenney, *Space Station Kit* 1.0 — `Previews/computer.png` | CC0 1.0 | 2026-08-15 | Medbay console |
+| `assets/props/container.png` | Kenney, *Space Station Kit* 1.0 — `Previews/container.png` | CC0 1.0 | 2026-08-15 | Medbay supply drum |
+
+Licence verified at the source, not at a mirror: *Space Station Kit* 1.0 ships a
+`License.txt` reading "Creative Commons Zero, CC0", created 10-04-2024,
+distributed by Kenney (www.kenney.nl). Attribution is not required. The pack was
+downloaded by the project owner and handed over directly, because this session's
+proxy blocks kenney.nl — which is the correct way round: a file pulled from some
+mirror cannot have its licence checked where it was published.
+
+**What these files actually are.** The pack is a set of 97 3D models
+(`.glb`/`.fbx`/`.obj`) plus a 512×512 colour atlas. It contains no sprite sheet.
+The 2D PNGs are 64×64 catalogue thumbnails, one per model, rendered from a fixed
+isometric camera — but they carry alpha, so they work as sprites as-is. The
+three above are used unmodified.
+
+## Rendering our own sprites
+
+Also held locally, not yet imported: Kenney *Mini Characters* 1.0 (CC0, created
+17-07-2024, 26 models). Neither pack is a 2D asset pack, and that turns out to
+be an advantage rather than a shortfall. 3D source means sprites can be rendered
+at any angle, size and number of animation frames instead of being limited to
+whatever a sheet happens to contain — so "the pack is missing the frame we
+need" stops being possible.
+
+When crew sprites are wanted, the route is a `tools/` script that renders the
+models through a `SubViewport` and a `Camera3D` built in code, exactly as
+`tools/screenshot.gd` already builds a scene tree at runtime. **No `.tscn` is
+created**, so `CLAUDE.md` rule 1 holds. Rendered output lands in `assets/` and
+gets its own rows in this table, naming the pack it came from.

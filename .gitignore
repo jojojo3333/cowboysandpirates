@@ -3,7 +3,11 @@
 
 # Godot's import cache and editor state
 .godot/
-*.import
+
+# *.import files are NOT ignored. Godot writes one next to every imported asset
+# and it carries that asset's import settings; without it the settings are
+# regenerated from defaults on each machine, so the web export can differ from
+# what was tested. They were ignored while the project had no assets at all.
 
 # export_presets.cfg is deliberately NOT ignored. It is usually treated as
 # local editor state, but CI cannot export without it, and the web build is

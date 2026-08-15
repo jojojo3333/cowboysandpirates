@@ -17,6 +17,85 @@ open.
 
 ---
 
+# Render passes — a separate track
+
+Presentation work does not belong in the slice sequence. Slices are missions and
+mechanics, numbered in build order; how the ship *looks* cuts across all of them
+and gets revisited many times, so it is numbered on its own track: **RENDER PASS
+1, 2, 3 …**, independent of `CURRENT SLICE`.
+
+Two numbering options were rejected. "Slice 1.5" implies it belongs between two
+mission slices and stops working the second time it happens — and it will happen
+often. "Slice 0" is taken by the cargo hold rescue, which is shipped, and reusing
+the number would make the build order ambiguous forever.
+
+The rules that hold for slices hold here too: the game must run and be clickable
+at the end of every pass, and `tools/verify.sh` must be green before it is
+committed.
+
+**A render pass may never change a simulation number.** If the balance report
+moves, something has leaked from `ui/` into `sim/` and the pass is wrong. The
+report is the check: it read 39.4s for both plans before RENDER PASS 1 and 39.4s
+after.
+
+## RENDER PASS 1 — "It looked like a text adventure"  ✅ DONE
+
+The ship view was six flat grey rectangles, a hairline outline and a triangle
+for a nose, all inside a value range about 0.09–0.19 wide. A human called it
+"an A4 sheet with a point on the front", which was accurate.
+
+Nothing here is a new mechanic and nothing is clickable that was not clickable
+before. All of it is in `ui/ship_view.gd`, plus one new data file.
+
+- **A hull that is not the room block plus a margin.** Cut corners, a narrowed
+  nose with a bridge module and a canopy, a tapered stern, and two full-length
+  engine nacelles carried outside the body on struts. The nacelles are the load-
+  bearing part: a wide, short hull cannot express length or direction on its
+  own, and mass off the main axis is the one thing a rectangle cannot fake.
+- **Space to sit in.** A deterministic starfield — hashed, not random, because
+  `sim/rng.gd` owns the only RNG and a reseeding starfield would flicker — over
+  a banded gradient, with one dust cloud and a vignette.
+- **Lit interiors.** Room floors are now *lighter* than the hull around them,
+  which is what makes them read as decks with the lights on. They were darker,
+  which read as holes cut in a diagram. Plus a floor panel grid and a bevel lit
+  from one direction.
+- **Walls with thickness**, 8px with a lit edge and a dark edge, and doors as a
+  recess with two leaves and a lit threshold. 2px lines are a floor plan.
+- **The whole ordered route** drawn as a crawling dashed line to a pulsing
+  destination ring, instead of one straight segment to the next room.
+- **Furniture**, from `data/room_props.json` — see the next section.
+- Crew markers get a cast shadow, a shaded disc and a plate behind the name,
+  which small text needs once the floor underneath it has texture.
+
+**Reported, not tuned:** the balance report is unchanged at 39.4s for both
+plans, with end HP [100 ×5] for hack and [75 ×5] for fight.
+
+**Not done, and deliberately:** crew are still coloured discs. Sprites for them
+are a later pass — see `ASSETS.md` for how they get rendered when that happens.
+
+### Props are data, and only Medbay has any
+
+`data/room_props.json` places furniture by fractions of the room rectangle, so
+props keep their position and proportion at any window size. It is **decoration
+only**: nothing in it is clickable, `sim/` never reads it, and an empty prop list
+is the normal case. That is why it is a separate file from `ship_layout.json`,
+which is what the simulation treats as truth.
+
+Only Medbay is furnished, on purpose — one room is enough to judge whether
+imported art and drawn geometry can share a screen before three sprites become
+thirty. `tools/validate_data.gd` fails the build if a prop names a room that
+does not exist, a sprite file that is not in `assets/props/`, or a coordinate
+outside 0..1.
+
+**The open question this pass exists to answer:** Kenney's station kit is bright,
+clean and pastel; Deadweight is Sol in 2100 and worn out. The props are
+modulated toward the ship's palette by one constant, `COL_PROP` in
+`ui/ship_view.gd`. Whether that is enough, or whether the styles simply do not
+belong together, is a judgement call for a human looking at the screen — a
+headless screenshot cannot answer it, per `CLAUDE.md`.
+
+---
+
 ## Slice 0 — "The Cargo Hold"  ✅ DONE
 
 The first playable thing. One situation, one decision, no combat.

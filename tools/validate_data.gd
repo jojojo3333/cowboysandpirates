@@ -27,6 +27,7 @@ func _init() -> void:
 
 	var room_ids: Array = _check_layout()
 	_check_scene(room_ids, crew_ids)
+	_check_room_props(room_ids)
 
 	for w: String in warnings:
 		print("WARN  ", w)
@@ -158,6 +159,57 @@ func _check_scene(room_ids: Array, crew_ids: Array) -> void:
 	for plan: Variant in choice_ids:
 		if not endings.has(str(plan)):
 			errors.append("scene_rescue.json: no ending for plan '%s'" % str(plan))
+
+
+# Props are decoration, so a missing one cannot break the simulation — it fails
+# silently and leaves a room bare, which is exactly the kind of thing nobody
+# notices for a month. Checking it here makes it a build failure instead.
+#
+# The sprite-file check is also the enforcement point for CLAUDE.md rule 2: a
+# name here can only resolve to a file in assets/props/, and every file there
+# has to earn its row in ASSETS.md before it can be committed.
+func _check_room_props(room_ids: Array) -> void:
+	var path: String = "res://data/room_props.json"
+	if not FileAccess.file_exists(path):
+		return
+	var data: Variant = _load_json(path)
+	if data == null or not (data is Dictionary):
+		return
+
+	var rooms: Variant = (data as Dictionary).get("rooms", {})
+	if not (rooms is Dictionary):
+		errors.append("room_props.json: 'rooms' must be an object keyed by room id")
+		return
+
+	for key: Variant in (rooms as Dictionary).keys():
+		var room_id: String = str(key)
+		if not room_ids.is_empty() and not room_ids.has(room_id):
+			errors.append("room_props.json: '%s' is not a room in ship_layout.json" % room_id)
+		var list: Variant = (rooms as Dictionary)[key]
+		if not (list is Array):
+			errors.append("room_props.json: '%s' must hold an array of props" % room_id)
+			continue
+		for entry: Variant in list as Array:
+			if not (entry is Dictionary):
+				errors.append("room_props.json: a prop in '%s' is not an object" % room_id)
+				continue
+			var prop: Dictionary = entry as Dictionary
+			var sprite: String = str(prop.get("sprite", ""))
+			if sprite == "":
+				errors.append("room_props.json: a prop in '%s' has no sprite" % room_id)
+				continue
+			if not FileAccess.file_exists("res://assets/props/%s.png" % sprite):
+				errors.append(
+					"room_props.json: '%s' names sprite '%s', but assets/props/%s.png does not exist"
+					% [room_id, sprite, sprite]
+				)
+			for axis: String in ["x", "y"]:
+				var v: float = float(prop.get(axis, 0.5))
+				if v < 0.0 or v > 1.0:
+					errors.append(
+						"room_props.json: prop '%s' in '%s' has %s=%s outside 0..1"
+						% [sprite, room_id, axis, str(v)]
+					)
 
 
 func _check_crew(data: Variant, class_ids: Array) -> Array:
