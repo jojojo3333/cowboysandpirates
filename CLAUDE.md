@@ -53,8 +53,20 @@ start the next one without being asked.
 2. **No addons and no plugins.** For UI chrome — panels, buttons, the log —
    `ColorRect`, `Label`, `Button`, `ProgressBar`, `VBoxContainer`,
    `HBoxContainer`, `PanelContainer`, `GridContainer`, `MarginContainer`,
-   `ScrollContainer`. The ship itself is drawn: a `Control` with `_draw()`,
-   plus `Node2D`, `Polygon2D` and `Line2D` where they help.
+   `ScrollContainer`. Drawing happens in a `Control` with `_draw()`, plus
+   `Node2D`, `Polygon2D` and `Line2D` where they help.
+
+   **The ship is art. Code draws state, not structure.** This rule used to read
+   "the ship itself is drawn", and that was the single most expensive mistake in
+   the project — it encoded a pipeline none of the reference games use, before
+   anyone had checked how they are actually built. FTL ships are authored PNGs
+   positioned by a layout file; Void War's hull is a contract artist's pixel
+   art. Hull, compartment floors, bulkheads and doors come from a **ship plate**
+   (see `ASSETS.md`). What `_draw()` is for is everything that changes:
+   selection, crew, door state, fire, breach, targeting, route, damage.
+
+   The test: if it would look identical in a screenshot of a paused game with
+   nothing selected, it belongs in the plate, not in code.
 
    **Imported assets are allowed only under CC0, with documented provenance.**
    Every imported file gets an entry in `ASSETS.md` naming its source, its

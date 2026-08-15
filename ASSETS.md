@@ -65,6 +65,95 @@ The 2D PNGs are 64×64 catalogue thumbnails, one per model, rendered from a fixe
 isometric camera — but they carry alpha, so they work as sprites as-is. The
 three above are used unmodified.
 
+## Ship plate spec — what the renderer needs from a ship image
+
+A **ship plate** is one image containing the whole ship, hull *and* interior
+compartments, viewed from directly overhead with the roof removed. It is the
+art. The renderer draws no hull, no walls and no floors on top of it — only
+state: selection, crew, doors, fire, damage, targeting, route.
+
+Room shapes are traced from the plate once, by hand, into `ship_layout.json` as
+polygons in plate coordinates. This is what FTL's `layout.txt` does and what its
+Superluminal editor exists to author.
+
+**Only one plate is generated per ship, so the plate has to serve both jobs at
+once.** A second render as a flat-colour room mask would make tracing exact and
+automatic, but image models do not reproduce the same ship twice, so a mask
+plate would not line up with the art plate. Instead the *art* carries the
+boundary information: every compartment is separated by a clearly visible
+bulkhead wall, which is both realistic and traceable.
+
+Deriving rooms from a tinted overlay was tried and does not work. In the
+reference render the room tints sat 10–20 RGB apart and overlapped the bare
+hull — shield room `(63,61,65)` against bare hull `(52,47,41)`. Not separable.
+
+### Hard requirements
+
+| | |
+|---|---|
+| Projection | strict orthographic top-down, no perspective, no tilt |
+| Background | uniform flat black, no gradient, no vignette, no stars, no glow spill |
+| Text | none anywhere — no labels, numbers, logos or watermarks |
+| Room fills | none; floors are bare metal, no colour tints |
+| Boundaries | every compartment separated by a visibly lighter bulkhead band, unbroken except at doorways |
+| Contrast | compartment floors *darker* than the bulkhead walls |
+| Lighting | one overhead source, even across the ship — code-drawn light must not fight baked side-light |
+| Contents | no crew, no fire, no damage; those are drawn at runtime |
+| Resolution | 2048 px or more on the long axis |
+
+Save the plate as a **direct PNG download**. Plates arriving inside an exported
+PDF are re-encoded and lose resolution.
+
+### The generation prompt
+
+Kept verbatim so a replacement plate can be commissioned against the same
+description. Room order is bow to stern.
+
+```
+Top-down orthographic cutaway of a small military freighter, seen from directly
+above with the roof removed. Grimdark science fiction: heavy worn steel plating,
+low saturation, greys and browns, rust streaks, scorch marks, riveted armour.
+Utilitarian and military rather than sleek — a working warship repaired badly
+many times.
+
+The interior is visible as seven compartments, bow to stern:
+
+- PILOT DECK at the bow behind the forward canopy — the smallest compartment,
+  consoles and seats facing forward
+- MEDBAY — small, bunks and medical equipment
+- SHIELD ROOM — a large emitter housing dominating the space
+- WEAPONS / TURRET ROOM — amidships, the largest of the mid compartments,
+  ammunition racks and turret mounts
+- REACTOR — glowing core behind heavy shielding
+- ENGINE ROOM — aft, machinery and thrust structure
+- CARGO BAY at the stern end — the largest compartment, mostly open deck with
+  crates lashed down
+
+Compartments must be clearly different sizes and non-rectangular — irregular
+shapes that follow the hull.
+
+Every compartment is separated by a clearly visible bulkhead wall, drawn as a
+distinctly lighter metal band roughly 10 pixels thick, unbroken except at
+doorways. Room boundaries must be unambiguous. Visible doorways where
+compartments connect.
+
+Compartment floors are darker than the bulkhead walls. Interior detail is
+restrained and readable, not visual noise. Hull exterior detail is denser than
+the interiors: turrets, antennae, armour plating, hatches, greebles.
+
+No text, no labels, no numbers, no logos, no watermarks. No coloured room fills
+or tints — floors are bare metal. No people or crew figures. No fire, damage or
+smoke. Engine glow confined to the thruster bells at the stern.
+
+Uniform flat black background, no gradient, no vignette, no stars, no glow
+spilling onto the background. Strict orthographic top-down, no perspective. One
+light source directly overhead, even across the whole ship, no dramatic side
+lighting.
+
+Ship fills the frame horizontally with a small even margin. Long axis 2048
+pixels or more.
+```
+
 ## Rendering our own sprites
 
 Also held locally, not yet imported: Kenney *Mini Characters* 1.0 (CC0, created
