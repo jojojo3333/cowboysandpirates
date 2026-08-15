@@ -27,7 +27,6 @@ func _init() -> void:
 
 	var room_ids: Array = _check_layout()
 	_check_scene(room_ids, crew_ids)
-	_check_room_props(room_ids)
 
 	for w: String in warnings:
 		print("WARN  ", w)
@@ -100,6 +99,11 @@ func _check_layout() -> Array:
 		errors.append("ship_layout.json: no rooms loaded")
 		return ids
 
+	if layout.plate_path == "" or not FileAccess.file_exists(layout.plate_path):
+		errors.append("ship_layout.json: plate '%s' does not exist" % layout.plate_path)
+	if layout.plate_normal_path != "" and not FileAccess.file_exists(layout.plate_normal_path):
+		errors.append("ship_layout.json: plate_normal '%s' does not exist" % layout.plate_normal_path)
+
 	for room: ShipRoom in layout.rooms:
 		if room.id == "":
 			errors.append("ship_layout.json: a room has no id")
@@ -108,6 +112,44 @@ func _check_layout() -> Array:
 		ids.append(room.id)
 		if room.adjacent.is_empty():
 			errors.append("ship_layout.json: room '%s' is isolated" % room.id)
+
+		# A room with no shape is invisible and unclickable, and the failure
+		# looks like a dead click rather than a crash.
+		if room.polygon.size() < 3:
+			errors.append("ship_layout.json: room '%s' has no polygon" % room.id)
+		else:
+			for p: Vector2 in room.polygon:
+				if p.x < 0.0 or p.y < 0.0 or p.x > layout.plate_size.x or p.y > layout.plate_size.y:
+					errors.append(
+						"ship_layout.json: room '%s' has a point outside the plate: %s"
+						% [room.id, str(p)]
+					)
+					break
+			if not Geometry2D.is_point_in_polygon(room.centre(), room.polygon):
+				errors.append(
+					"ship_layout.json: room '%s' centroid falls outside its own polygon"
+					% room.id
+				)
+
+	# Every connection needs a door, or crew walk through a bulkhead.
+	for room: ShipRoom in layout.rooms:
+		for other_id: String in room.adjacent:
+			if layout.get_room(other_id) == null:
+				continue
+			var found: bool = false
+			for d: Dictionary in layout.doors:
+				var pair: Array = d.get("between", []) as Array
+				if pair.size() == 2 and (
+					(pair[0] == room.id and pair[1] == other_id)
+					or (pair[0] == other_id and pair[1] == room.id)
+				):
+					found = true
+					break
+			if not found:
+				warnings.append(
+					"ship_layout.json: no door authored between '%s' and '%s'"
+					% [room.id, other_id]
+				)
 
 	# An asymmetric adjacency list produces a room fire can enter and not leave.
 	# That bug would only surface once v0.2 exists, which is exactly why it is
@@ -159,57 +201,6 @@ func _check_scene(room_ids: Array, crew_ids: Array) -> void:
 	for plan: Variant in choice_ids:
 		if not endings.has(str(plan)):
 			errors.append("scene_rescue.json: no ending for plan '%s'" % str(plan))
-
-
-# Props are decoration, so a missing one cannot break the simulation — it fails
-# silently and leaves a room bare, which is exactly the kind of thing nobody
-# notices for a month. Checking it here makes it a build failure instead.
-#
-# The sprite-file check is also the enforcement point for CLAUDE.md rule 2: a
-# name here can only resolve to a file in assets/props/, and every file there
-# has to earn its row in ASSETS.md before it can be committed.
-func _check_room_props(room_ids: Array) -> void:
-	var path: String = "res://data/room_props.json"
-	if not FileAccess.file_exists(path):
-		return
-	var data: Variant = _load_json(path)
-	if data == null or not (data is Dictionary):
-		return
-
-	var rooms: Variant = (data as Dictionary).get("rooms", {})
-	if not (rooms is Dictionary):
-		errors.append("room_props.json: 'rooms' must be an object keyed by room id")
-		return
-
-	for key: Variant in (rooms as Dictionary).keys():
-		var room_id: String = str(key)
-		if not room_ids.is_empty() and not room_ids.has(room_id):
-			errors.append("room_props.json: '%s' is not a room in ship_layout.json" % room_id)
-		var list: Variant = (rooms as Dictionary)[key]
-		if not (list is Array):
-			errors.append("room_props.json: '%s' must hold an array of props" % room_id)
-			continue
-		for entry: Variant in list as Array:
-			if not (entry is Dictionary):
-				errors.append("room_props.json: a prop in '%s' is not an object" % room_id)
-				continue
-			var prop: Dictionary = entry as Dictionary
-			var sprite: String = str(prop.get("sprite", ""))
-			if sprite == "":
-				errors.append("room_props.json: a prop in '%s' has no sprite" % room_id)
-				continue
-			if not FileAccess.file_exists("res://assets/props/%s.png" % sprite):
-				errors.append(
-					"room_props.json: '%s' names sprite '%s', but assets/props/%s.png does not exist"
-					% [room_id, sprite, sprite]
-				)
-			for axis: String in ["x", "y"]:
-				var v: float = float(prop.get(axis, 0.5))
-				if v < 0.0 or v > 1.0:
-					errors.append(
-						"room_props.json: prop '%s' in '%s' has %s=%s outside 0..1"
-						% [sprite, room_id, axis, str(v)]
-					)
 
 
 func _check_crew(data: Variant, class_ids: Array) -> Array:

@@ -68,7 +68,19 @@ start the next one without being asked.
    The test: if it would look identical in a screenshot of a paused game with
    nothing selected, it belongs in the plate, not in code.
 
-   **Imported assets are allowed only under CC0, with documented provenance.**
+   **Imported assets need documented provenance in `ASSETS.md`** — CC0 for
+   anything fetched from the internet, or owner-supplied for art the project
+   owner generates or commissions and hands over. Never art prompted from a
+   protected property, and never files extracted from another game.
+
+   **The engine is allowed. Use it.** `PointLight2D`, `CanvasModulate`, normal
+   maps, `GPUParticles2D`, `ShaderMaterial`, `AnimatedSprite2D`, `Tween` are core
+   Godot, not addons, and rule 2 has never forbidden them. This was misread for
+   two render passes — a vignette got hand-built from 22 nested rectangles with a
+   comment claiming rule 2 ruled out a shader. It does not. If the engine has a
+   feature for it, use the feature.
+
+   Superseded wording kept for the record:
    Every imported file gets an entry in `ASSETS.md` naming its source, its
    licence and the date it was fetched. No exceptions, including "just a
    placeholder we will swap later" — placeholder art is how unlicensed art

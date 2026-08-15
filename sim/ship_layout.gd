@@ -5,10 +5,31 @@ class_name ShipLayout
 # movement costs in this scene and what fire spreads along in v0.2.
 
 var rooms: Array[ShipRoom] = []
-var grid_columns: int = 3
-var grid_rows: int = 2
+
+# Everything below is for the viewer. The simulation reads `adjacent` only —
+# see path() — so a ship's shape can change without the sim noticing.
+var plate_path: String = ""
+var plate_normal_path: String = ""
+var plate_size: Vector2 = Vector2(1848.0, 855.0)
+var doors: Array[Dictionary] = []
 
 var _by_id: Dictionary = {}
+
+
+# Where two rooms connect on the plate. Crew walk through this rather than
+# straight between room centres.
+func door_between(a: String, b: String) -> Vector2:
+	for d: Dictionary in doors:
+		var pair: Array = d.get("between", []) as Array
+		if pair.size() == 2 and ((pair[0] == a and pair[1] == b) or (pair[0] == b and pair[1] == a)):
+			return d.get("at", Vector2.ZERO) as Vector2
+	# No authored door: fall back to the midpoint, which is what the view did
+	# for every pair before doors existed.
+	var ra: ShipRoom = get_room(a)
+	var rb: ShipRoom = get_room(b)
+	if ra == null or rb == null:
+		return Vector2.ZERO
+	return (ra.centre() + rb.centre()) * 0.5
 
 
 func add_room(room: ShipRoom) -> void:

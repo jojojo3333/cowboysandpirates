@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cgkgkrhxbdeu6"
-path="res://.godot/imported/container.png-3e63d0188e2501f60d9f3dbf07010e77.ctex"
+uid="uid://vqro2j2hvnjv"
+path="res://.godot/imported/hull_plate_normal.png-84d4a46e867f3485b049c07055c22c27.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/props/container.png"
-dest_files=["res://.godot/imported/container.png-3e63d0188e2501f60d9f3dbf07010e77.ctex"]
+source_file="res://assets/ship/hull_plate_normal.png"
+dest_files=["res://.godot/imported/hull_plate_normal.png-84d4a46e867f3485b049c07055c22c27.ctex"]
 
 [params]
 
