@@ -5,12 +5,36 @@ anything.
 
 ## What this is
 
-A real-time-with-pause roguelike in the FTL lineage. Godot 4.7, GDScript.
+A real-time-with-pause roguelike in the Void War lineage. Godot 4.7, GDScript.
 Working title **Deadweight**. Setting is `SETTING.md`: Sol in 2100, a gold rush,
 no aliens and no FTL. You command a small ship and a crew, and the whole design
 goal is that losing one of them costs you something.
 
 Nothing is built yet. `SLICE.md` says **CURRENT SLICE: 0**.
+
+### The visual reference is Void War, not FTL
+
+**Void War** (Tundra, two people plus a contract artist) is the look and tone we
+are aiming at: dark techno-gothic, low saturation, heavy hull detail. It is not
+"pretty" and players have complained it is hard to read because it is so
+monotone — both true, and still closer to what this project wants than FTL's
+bright primaries.
+
+"FTL" survives in these documents in four places only, where a verifiable fact
+about that specific game is being cited and swapping the name would make the
+sentence false:
+
+- `CLAUDE.md` above — **"no FTL" there means faster-than-light travel**, the
+  setting rule. It is not a reference to the game at all.
+- `VOICE_AND_EVENTS.md §1` — FTL's sales record is the evidence for the
+  no-plot argument. Void War is a 2024 indie and cannot carry that claim.
+- `GAME_SPEC_v0.2 §1` — inside a quoted reviewer comparison *of* Void War *to*
+  FTL. Editing a quotation is not a rename.
+- `SETTING.md §4` — FTL's ship-unlock structure is the documented mechanic
+  being borrowed. Whether Void War unlocks ships the same way is unverified.
+
+Everywhere else — projection, room scale, silhouette, palette — the reference
+is Void War.
 
 ## Slice discipline — the most important rule
 

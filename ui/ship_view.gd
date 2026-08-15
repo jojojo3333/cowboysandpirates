@@ -2,8 +2,8 @@ extends Control
 class_name ShipView
 
 # Top-down ship view: rooms as drawn rectangles at real pixel positions, crew
-# as markers that move between them. FTL's projection, which is flat overhead —
-# not isometric.
+# as markers that move between them. Void War's projection, which is flat
+# overhead — not isometric.
 #
 # Everything structural here is drawn in _draw(). The room grid comes from
 # data/ship_layout.json, so moving a room is a data change. Furniture comes
@@ -22,8 +22,8 @@ const PROPS_PATH: String = "res://data/room_props.json"
 const PROP_DIR: String = "res://assets/props/"
 
 # Rooms used to grow to 300x230, which left five of the six as vast empty grey
-# fields and made the ship read as a spreadsheet. FTL's rooms are small; the
-# ship should be compact enough that the hull around it is visible.
+# fields and made the ship read as a spreadsheet. Void War's rooms are small;
+# the ship should be compact enough that the hull around it is visible.
 const CELL_MIN: Vector2 = Vector2(132.0, 104.0)
 const CELL_MAX: Vector2 = Vector2(224.0, 168.0)
 

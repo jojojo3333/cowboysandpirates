@@ -38,6 +38,78 @@ moves, something has leaked from `ui/` into `sim/` and the pass is wrong. The
 report is the check: it read 39.4s for both plans before RENDER PASS 1 and 39.4s
 after.
 
+## Where the ship art has to come from
+
+**Finding: the current approach does not reach the Void War look, and the reason
+is structural rather than a matter of effort.** This was checked rather than
+assumed, after a human compared our hull to Void War's and said ours still looks
+like it was built in a 2D shape program. That diagnosis is correct.
+
+### What the reference games actually do
+
+- **Void War** is made by Tundra, a two-person studio, *plus contractors —
+  including an additional artist*. That hull is authored pixel art, paid for.
+- **FTL** ships are a hand-drawn `ship_base` PNG for the hull plus one authored
+  PNG per interior room (`room_weapons_8.png` and so on), positioned by a
+  layout file. Modders either fit their layout to existing room images or draw
+  new ones. **The art comes first; the data describes the art.**
+- **Cosmoteer** is the exception that shows the middle path: every ship is
+  assembled procedurally from *hand-drawn modules* on a grid, 64×64 pixels per
+  1×1 tile. The assembly is code. The density is art.
+
+Ours is inverted: `ship_layout.json` drives `_draw()` primitives, which produce
+the picture. That is the one arrangement none of the three reference games use.
+
+### Why more primitives will not close the gap
+
+Not because of polygon count. Because of information. A Void War hull carries
+thousands of individually decided pixels. Procedural code derives detail from a
+handful of parameters, and rules produce regularity, which the eye reads as
+machine-made. Adding greebles procedurally makes the render *busier*, not more
+authored — and "procedurally greebled" is its own recognisable look, worse than
+clean geometry. RENDER PASS 1 took the primitive approach roughly as far as it
+goes; the remaining distance is not more of the same.
+
+### Two separate problems, not one
+
+1. **The grid.** Rooms are a uniform 3×2 block of identical rectangles. FTL's
+   unit cell is 35×35 px and rooms are variable multiples of it — 1×1, 2×1, 2×2
+   — which is most of why its ships look built rather than tabulated. Our layout
+   format has no room width or height at all. **This is a data problem and it is
+   independent of where art comes from.** Fixing it costs no assets.
+2. **The marks.** Primitives instead of authored tiles. This is the art problem.
+
+Fixing 2 without fixing 1 buys detailed tiles arranged in a spreadsheet.
+
+### The three routes, and the recommendation
+
+| | Route | Result | Cost |
+|---|---|---|---|
+| A | One authored hull PNG per ship, FTL-style | Best. What the references do. | An artist, or a CC0 find that does not appear to exist |
+| B | **Modular authored tiles, assembled by code, Cosmoteer-style** | Close. Density from art, variety from code | ~30–40 tiles, once |
+| C | Render tiles from CC0 3D kits | Feeds B without an artist | Tooling; style is Kenney-clean, not grimdark |
+
+**Recommended: B, fed initially by C or by a bought tileset.** It fits what
+already exists — the layout, geometry, lighting and composition work from RENDER
+PASS 1 all survive; only "what gets drawn per cell" changes from primitives to
+textures. The tile set is small and finite: floor variants, wall straight and
+corner and end, door, hull edge straight and corner and nose and stern, plus one
+interior per system.
+
+Route A is worth noting is *not* available off the shelf. The large CC0
+spaceship packs — Wisedawn's 211 sprites, generated with Vesselforge from
+Kenney's spaceship parts — are **exterior** ships seen from outside. An
+FTL-style cutaway interior is a different and much rarer asset.
+
+### The open decision
+
+Where the tiles come from: bought (grimdark modular sci-fi interior tilesets
+exist on itch for roughly the price of a coffee), commissioned, rendered from
+3D, or generated. **Generated art is a rule conflict, not a free option** —
+`CLAUDE.md` rule 2 requires CC0 with documented provenance, which model output
+does not have. Changing that rule is the owner's call, not something to route
+around quietly.
+
 ## RENDER PASS 1 — "It looked like a text adventure"  ✅ DONE
 
 The ship view was six flat grey rectangles, a hairline outline and a triangle

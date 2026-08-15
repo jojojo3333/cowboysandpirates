@@ -190,7 +190,7 @@ reputation, different opening region. FTL's ship-unlock structure.
 always between Mars and Jupiter. Who is there, what is happening, and which
 nodes are reachable this run are rolled per run.
 
-This is the pleasure FTL structurally cannot offer: by run ten a player knows
+This is the pleasure Void War structurally cannot offer: by run ten a player knows
 Ganymede is where the farms are and Eros is where you do not stop.
 
 | Region | Nodes | Character |

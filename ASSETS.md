@@ -7,10 +7,14 @@ walls, doors, crew, starfield — is still drawn at runtime in `ui/ship_view.gd`
 from rectangles, polygons, lines and the engine's fallback font. The only
 imported art is the furniture inside rooms, listed below.
 
-That split is deliberate and is expected to hold. In an FTL-like interior view
-the sprite count is small — crew, system icons, furniture — and everything else
-is geometry and lighting. Buying more art does not fix a flat render; it just
-puts art on a flat render.
+**That split was wrong and this file previously said so in the other direction.**
+It claimed the sprite count in a game like this is small and that everything
+else is geometry and lighting. Checking how the reference games are actually
+built shows the opposite: FTL ships are a hand-drawn `ship_base` PNG plus one
+authored PNG per interior room, positioned by a layout file; Void War's hull
+detail is authored pixel art by a contract artist. The art comes first and the
+data describes the art. Drawing the ship from primitives has a ceiling that more
+primitives do not raise. See `SLICE.md`, "Where the ship art has to come from".
 
 ## The rule
 

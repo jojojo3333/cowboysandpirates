@@ -1,6 +1,6 @@
 # Cowboys and Pirates
 
-A real-time-with-pause roguelike in the FTL lineage. Godot 4.7, GDScript.
+A real-time-with-pause roguelike in the Void War lineage. Godot 4.7, GDScript.
 
 Sol, 2100. No aliens, no faster-than-light, no time travel — a gold rush in its
 second decade, run by four corporations that own movement, breathing, dying and
