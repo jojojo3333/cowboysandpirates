@@ -1,0 +1,76 @@
+{
+  "_comment": "The cargo hold rescue. Every number the simulation uses lives here — CLAUDE.md rule 5. Ids must not change.",
+
+  "_voice_rule": "TOCK never uses contractions, states probabilities unprompted and does not soften them, and never says anything the log has not already said in plain form. VOICE_AND_EVENTS.md §3. A line that carries information the log does not is a bug, not a flourish.",
+
+  "id": "cargo_hold_rescue",
+  "title": "THE CARGO HOLD",
+
+  "tock_start_room": "weapons",
+  "captives_room": "cargo",
+  "captives": ["smith", "ostrow", "vela", "mazur", "kwon"],
+
+  "timing": {
+    "_comment": "[PLAY-GATED] every one of these. Build as written, report, do not tune.",
+    "transit_seconds": 3.0,
+    "free_seconds": 6.0,
+    "hack_seconds": 18.0,
+    "hack_stagger_seconds": 4.0,
+    "fight_seconds": 12.0,
+    "boarder_count": 2,
+    "fight_damage_per_crew": 25,
+    "crew_max_hp": 100
+  },
+
+  "opening": [
+    "TOCK reboots. Eleven minutes missing.",
+    "The crew are in the cargo hold. Restrained. Alive.",
+    "Two boarders are still aboard, working aft."
+  ],
+
+  "proposal": {
+    "speaker": "tock",
+    "text": "Captain, these pirates wear Yakawa Mark II Spacesuits. These are so old that I can hack their oxygen connection and cut it. Do you want me to do that or would you rather fight your way out of this situation? And in case you are wondering, we still have some old weapons stashed away in the cargo bay.",
+    "choices": [
+      {
+        "id": "hack",
+        "label": "Cut their oxygen",
+        "detail": "Quiet. Takes time. They will not know."
+      },
+      {
+        "id": "fight",
+        "label": "Fight our way out",
+        "detail": "The weapons are in the cargo bay. So is the crew."
+      }
+    ]
+  },
+
+  "lines": {
+    "_comment": "Keyed by trigger. Fired at most once each, in the order the sim reaches them.",
+
+    "plan_hack": "Understood. I am in their suit telemetry now. Neither of them has noticed. Yakawa never encrypted the life-support bus. There was no reason to, in 2081.",
+    "plan_fight": "Understood. Then we go to the cargo bay first. I would like to record that I offered the quiet option.",
+
+    "hack_progress": "Cabin pressure in both suits is falling. They have not checked their displays. People do not, once a job is going well.",
+    "hack_done": "Both boarders are down. Time from initiation, eighteen seconds. I did not enjoy that. I am aware that the statement does not change anything.",
+
+    "weapons_taken": "Two cutters and a bolt gun. All of it older than Mazur. It will do.",
+    "fight_start": "They have seen us. Engaging.",
+    "fight_done": "Both boarders are down. Everyone aboard is still breathing. That is a better outcome than I projected.",
+
+    "arrived_cargo": "I am in the hold. The restraints are industrial. I will need six seconds for each of them.",
+    "freed_smith": "Captain is up.",
+    "freed_ostrow": "Ostrow is up. He has not said anything. That is normal.",
+    "freed_vela": "Vela is up. Vela, I am aware that my left shoulder is wrong. It can wait.",
+    "freed_mazur": "Mazur is up and has already asked whether the ship is intact. It is not.",
+    "freed_kwon": "Kwon is up and is looking at me the way she looks at the Clone Bay.",
+
+    "all_free_hack": "All five are standing. Nobody aboard this ship was hurt today except the two men I suffocated. I will file that accurately.",
+    "all_free_fight": "All five are standing. Everybody is bleeding somewhat. Nobody is dying, which was the requirement."
+  },
+
+  "endings": {
+    "hack": "NOBODY ABOARD WAS HURT.",
+    "fight": "EVERYONE GOT OUT. EVERYONE IS BLEEDING."
+  }
+}

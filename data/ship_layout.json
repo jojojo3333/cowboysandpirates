@@ -1,0 +1,59 @@
+{
+  "_comment": "Room layout and adjacency. Grid coordinates are for the UI only; the simulation reads adjacency and nothing else. Ids must not change — scene scripts and save data key off them.",
+
+  "_grid": "2 rows x 3 columns.  weapons shields medbay  /  reactor engines cargo",
+
+  "grid_columns": 3,
+  "grid_rows": 2,
+
+  "rooms": [
+    {
+      "id": "weapons",
+      "label": "WEAPONS",
+      "system": "weapons",
+      "col": 0,
+      "row": 0,
+      "adjacent": ["shields", "reactor"]
+    },
+    {
+      "id": "shields",
+      "label": "SHIELDS",
+      "system": "shields",
+      "col": 1,
+      "row": 0,
+      "adjacent": ["weapons", "medbay", "engines"]
+    },
+    {
+      "id": "medbay",
+      "label": "MEDBAY",
+      "system": "medbay",
+      "col": 2,
+      "row": 0,
+      "adjacent": ["shields", "cargo"]
+    },
+    {
+      "id": "reactor",
+      "label": "REACTOR",
+      "system": "",
+      "col": 0,
+      "row": 1,
+      "adjacent": ["weapons", "engines"]
+    },
+    {
+      "id": "engines",
+      "label": "ENGINES",
+      "system": "engines",
+      "col": 1,
+      "row": 1,
+      "adjacent": ["reactor", "shields", "cargo"]
+    },
+    {
+      "id": "cargo",
+      "label": "CARGO",
+      "system": "",
+      "col": 2,
+      "row": 1,
+      "adjacent": ["medbay", "engines"]
+    }
+  ]
+}

@@ -1,6 +1,9 @@
 # SLICE.md
 
-**CURRENT SLICE: 0**
+**CURRENT SLICE: 1**
+
+Slice 0 is done. The slices below were renumbered when the cargo hold rescue
+became the first playable thing — what was slice 0 is now slice 1, and so on.
 
 Build only the current slice. When it runs and is committed, stop and wait.
 
@@ -8,15 +11,43 @@ Build only the current slice. When it runs and is committed, stop and wait.
 human can play start to finish. The encounter chain — five in `GAME_SPEC_v0.1
 §5`, six in `GAME_SPEC_v0.2 §8` — is deferred, and its length is an open number
 to be decided after the single mission has been played. Both counts in the
-specs are superseded until then. Slice 3 stays written as-is because the jump
+specs are superseded until then. Slice 4 stays written as-is because the jump
 screen and reward numbers are still what it needs to build; only the count is
 open.
 
 ---
 
-## Slice 0 — "It's a game" (target: 30 min)
+## Slice 0 — "The Cargo Hold"  ✅ DONE
 
-The smallest thing that is genuinely playable. One combat, nothing else.
+The first playable thing. One situation, one decision, no combat.
+
+Boarders took the ship and left the crew restrained in the hold. TOCK was
+DISABLED in the fight, so they left him where he fell — which is why he is the
+only one loose. He reboots, states the situation, and proposes two ways out:
+cut the boarders' suit oxygen, or take the weapons cached in the hold and fight.
+
+- 6 rooms as grey rectangles, from `data/ship_layout.json`. Adjacency is real:
+  TOCK moves one adjacent room at a time and each hop costs time.
+- 5 crew TIED in the cargo hold. Click a room to move TOCK, click a captive to
+  cut them loose.
+- Two plans with genuinely different outcomes. Hack: nobody aboard is hurt.
+  Fight: everyone ends at 75 HP, including the people who were still tied,
+  because a firefight in the hold does not care who is restrained.
+- `SPACE` pauses. The sim owns `time_scale`; `get_tree().paused` is never used.
+- Every state change writes a structured `LogEvent`. The UI formats them; in
+  v0.4 the bark system subscribes to the same stream with no sim changes.
+- **No fail state.** Damage floors at 1 HP. Nobody dies in this scene.
+
+**Done when:** a human can launch it, pick a plan, route TOCK to the hold, free
+all five, and reach the end screen without touching the console. ✅
+
+Reported, not tuned: both plans resolve in **39.4s** of simulated time under
+random-legal play. The difference between them is entirely moral and entirely
+in the HP column, which is the intended shape.
+
+## Slice 1 — Mission 2: the boarders' ship attacks (target: 30 min)
+
+The smallest combat that is genuinely playable. One fight, nothing else.
 
 - Player ship: `hull = 30`. Enemy ship: `hull = 15`, evasion 0%.
 - One player weapon: charge 8.0s, 1 damage. Fires automatically when charged
@@ -33,7 +64,7 @@ The smallest thing that is genuinely playable. One combat, nothing else.
 **Done when:** a human can launch it, unpause, watch bars fill, click a target,
 and reach either end screen without touching the console.
 
-## Slice 1 — Power and shields (target: 25 min)
+## Slice 2 — Power and shields (target: 25 min)
 
 - Reactor with 6 power bars, `+`/`−` buttons per system.
 - Systems: Shields, Engines, Weapons (Medbay deferred).
@@ -44,7 +75,7 @@ and reach either end screen without touching the console.
 - Weapons only charge if their power cost is covered.
 - Enemy gets 1 shield layer.
 
-## Slice 2 — Crew and system damage (target: 25 min)
+## Slice 3 — Crew and system damage (target: 25 min)
 
 - 3 crew: Smith, Vasquez, Okonkwo. HP 100. Assign by clicking crew, then room.
   Crew teleport instantly — no pathfinding.
@@ -60,7 +91,7 @@ new. XP is the first mechanic that makes a *specific* crew member
 irreplaceable, which is what v0.2 is for. v0.1's job is to prove the loop is
 fun with interchangeable crew.
 
-## Slice 3 — The run (target: 25 min)
+## Slice 4 — The run (target: 25 min)
 
 - The 5 hardcoded encounters from the spec, in order.
 - Jump screen between encounters: repair 15 scrap → +5 hull,
@@ -68,10 +99,17 @@ fun with interchangeable crew.
 - The two text events with their choices.
 - End screens report jump number, hull, scrap, crew alive.
 
-## Slice 4 — Harness (do last, or in session 2)
+## Slice 5 — Harness  ◐ PARTLY DONE
 
-- `tools/sim_runner.gd` extending `SceneTree`, random legal play,
-  `--runs N`, prints win rate and the seed of any crashing run.
+`tools/sim_runner.gd` exists and runs, pulled forward from last place because
+slices with no harness have nothing but the boot check to catch regressions —
+see `BUILD_PLAN.md`. It currently drives the rescue scene and asserts that both
+plans resolve, every captive ends ACTIVE above 0 HP, both boarders go down, and
+identical seeds produce identical runs.
+
+Still to do, once combat exists:
+- Random legal play rather than the scripted competent route
+- Win rate, and the seed of any crashing run
 - Target win rate 5–40%. Report the number; do not silently retune.
 
 ---

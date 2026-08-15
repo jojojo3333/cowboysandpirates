@@ -21,8 +21,12 @@ func _init() -> void:
 	var class_ids: Array = []
 	if classes != null:
 		class_ids = _check_classes(classes)
+	var crew_ids: Array = []
 	if crew != null:
-		_check_crew(crew, class_ids)
+		crew_ids = _check_crew(crew, class_ids)
+
+	var room_ids: Array = _check_layout()
+	_check_scene(room_ids, crew_ids)
 
 	for w: String in warnings:
 		print("WARN  ", w)
@@ -87,15 +91,86 @@ func _check_classes(data: Variant) -> Array:
 	return ids
 
 
-func _check_crew(data: Variant, class_ids: Array) -> void:
+func _check_layout() -> Array:
+	var layout: ShipLayout = DataLoader.load_layout()
+	var ids: Array = []
+
+	if layout.rooms.is_empty():
+		errors.append("ship_layout.json: no rooms loaded")
+		return ids
+
+	for room: ShipRoom in layout.rooms:
+		if room.id == "":
+			errors.append("ship_layout.json: a room has no id")
+		if ids.has(room.id):
+			errors.append("ship_layout.json: duplicate room id '%s'" % room.id)
+		ids.append(room.id)
+		if room.adjacent.is_empty():
+			errors.append("ship_layout.json: room '%s' is isolated" % room.id)
+
+	# An asymmetric adjacency list produces a room fire can enter and not leave.
+	# That bug would only surface once v0.2 exists, which is exactly why it is
+	# worth catching now.
+	for problem: String in layout.asymmetric_pairs():
+		errors.append("ship_layout.json: asymmetric adjacency %s" % problem)
+
+	return ids
+
+
+func _check_scene(room_ids: Array, crew_ids: Array) -> void:
+	var scene: Dictionary = DataLoader.load_scene()
+	if scene.is_empty():
+		errors.append("scene_rescue.json: did not load")
+		return
+
+	for key: String in ["tock_start_room", "captives_room"]:
+		var room_id: String = str(scene.get(key, ""))
+		if not room_ids.is_empty() and not room_ids.has(room_id):
+			errors.append("scene_rescue.json: %s '%s' is not a room" % [key, room_id])
+
+	var captives: Array = scene.get("captives", [])
+	if captives.is_empty():
+		errors.append("scene_rescue.json: no captives listed")
+	for entry: Variant in captives:
+		var cid: String = str(entry)
+		if not crew_ids.is_empty() and not crew_ids.has(cid):
+			errors.append("scene_rescue.json: captive '%s' is not in crew.json" % cid)
+
+	var timing: Dictionary = scene.get("timing", {}) as Dictionary
+	for key: String in [
+		"transit_seconds", "free_seconds", "hack_seconds",
+		"hack_stagger_seconds", "fight_seconds", "boarder_count",
+		"fight_damage_per_crew", "crew_max_hp",
+	]:
+		if not timing.has(key):
+			errors.append("scene_rescue.json: timing is missing '%s'" % key)
+
+	var proposal: Dictionary = scene.get("proposal", {}) as Dictionary
+	var choice_ids: Array = []
+	for entry: Variant in proposal.get("choices", []):
+		choice_ids.append(str((entry as Dictionary).get("id", "")))
+	for required: String in ["hack", "fight"]:
+		if not choice_ids.has(required):
+			errors.append("scene_rescue.json: proposal is missing the '%s' choice" % required)
+
+	# Every plan needs an ending, or finishing the scene shows a fallback string.
+	var endings: Dictionary = scene.get("endings", {}) as Dictionary
+	for plan: Variant in choice_ids:
+		if not endings.has(str(plan)):
+			errors.append("scene_rescue.json: no ending for plan '%s'" % str(plan))
+
+
+func _check_crew(data: Variant, class_ids: Array) -> Array:
+	var out_ids: Array = []
 	if not (data is Dictionary) or not (data as Dictionary).has("crew"):
 		errors.append("crew.json: missing top-level 'crew' array")
-		return
+		return out_ids
 
 	var dict: Dictionary = data as Dictionary
 	var ids: Array = []
 	var commanders: int = 0
 	var required: Array[String] = ["id", "name", "class", "starting_room"]
+	out_ids = ids
 
 	for entry: Variant in dict["crew"]:
 		var m: Dictionary = entry as Dictionary
@@ -115,3 +190,4 @@ func _check_crew(data: Variant, class_ids: Array) -> void:
 
 	if commanders != 1:
 		errors.append("crew.json: expected exactly one commander, found %d" % commanders)
+	return out_ids

@@ -1,0 +1,77 @@
+extends RefCounted
+class_name DataLoader
+
+# Parses data/*.json into runtime structures and fails loudly. ARCHITECTURE.md
+# §5: a missing key is a crash at startup, not a null at hour three.
+
+const LAYOUT_PATH: String = "res://data/ship_layout.json"
+const CREW_PATH: String = "res://data/crew.json"
+const CLASSES_PATH: String = "res://data/classes.json"
+const SCENE_PATH: String = "res://data/scene_rescue.json"
+
+
+static func load_json(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		push_error("data file missing: %s" % path)
+		return {}
+	var text: String = FileAccess.get_file_as_string(path)
+	var parsed: Variant = JSON.parse_string(text)
+	if parsed == null or not (parsed is Dictionary):
+		push_error("data file is not a JSON object: %s" % path)
+		return {}
+	return parsed as Dictionary
+
+
+static func load_layout() -> ShipLayout:
+	var raw: Dictionary = load_json(LAYOUT_PATH)
+	var layout: ShipLayout = ShipLayout.new()
+	if raw.is_empty():
+		return layout
+
+	layout.grid_columns = int(raw.get("grid_columns", 3))
+	layout.grid_rows = int(raw.get("grid_rows", 2))
+
+	for entry: Variant in raw.get("rooms", []):
+		var d: Dictionary = entry as Dictionary
+		var room: ShipRoom = ShipRoom.new()
+		room.id = str(d.get("id", ""))
+		room.label = str(d.get("label", room.id.to_upper()))
+		room.system = str(d.get("system", ""))
+		room.col = int(d.get("col", 0))
+		room.row = int(d.get("row", 0))
+		var adj: Array[String] = []
+		for a: Variant in d.get("adjacent", []):
+			adj.append(str(a))
+		room.adjacent = adj
+		layout.add_room(room)
+
+	return layout
+
+
+# Returns every crew member listed in crew.json, in file order, with class
+# metadata resolved. Synthetics are flagged from classes.json rather than by
+# checking the id, so a second synthetic needs no code change.
+static func load_crew() -> Array[CrewMember]:
+	var crew_raw: Dictionary = load_json(CREW_PATH)
+	var classes_raw: Dictionary = load_json(CLASSES_PATH)
+
+	var synthetic_classes: Dictionary = {}
+	for entry: Variant in classes_raw.get("classes", []):
+		var c: Dictionary = entry as Dictionary
+		synthetic_classes[str(c.get("id", ""))] = bool(c.get("is_synthetic", false))
+
+	var out: Array[CrewMember] = []
+	for entry: Variant in crew_raw.get("crew", []):
+		var d: Dictionary = entry as Dictionary
+		var m: CrewMember = CrewMember.new()
+		m.id = str(d.get("id", ""))
+		m.display_name = str(d.get("name", m.id))
+		m.class_id = str(d.get("class", ""))
+		m.room = str(d.get("starting_room", ""))
+		m.is_synthetic = bool(synthetic_classes.get(m.class_id, false))
+		out.append(m)
+	return out
+
+
+static func load_scene() -> Dictionary:
+	return load_json(SCENE_PATH)
