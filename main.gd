@@ -4,15 +4,12 @@ extends Control
 # GDScript at runtime — CLAUDE.md constraint 1. No .tscn is ever created or
 # hand-edited beyond main.tscn itself.
 #
-# This file is the whole of ui/ for slice 1. It holds no authoritative state:
-# everything it draws it reads from `scene`, and every click it turns into a
-# call back into the simulation.
+# This holds no authoritative state: everything it draws it reads from `scene`,
+# and every click it turns into a call back into the simulation. The ship
+# itself is drawn by ui/ship_view.gd.
 
 const BG: Color = Color(0.06, 0.07, 0.09)
 const PANEL: Color = Color(0.11, 0.13, 0.16)
-const ROOM_IDLE: Color = Color(0.16, 0.18, 0.22)
-const ROOM_TOCK: Color = Color(0.16, 0.26, 0.30)
-const ROOM_CAPTIVE: Color = Color(0.28, 0.18, 0.16)
 
 const TEXT: Color = Color(0.82, 0.85, 0.88)
 const DIM: Color = Color(0.50, 0.54, 0.58)
@@ -24,12 +21,7 @@ const MAX_LOG_LINES: int = 120
 
 var scene: RescueScene = null
 
-var _room_panels: Dictionary = {}
-var _room_titles: Dictionary = {}
-var _room_bodies: Dictionary = {}
-var _move_buttons: Dictionary = {}
-var _free_buttons: Dictionary = {}
-
+var _ship: ShipView = null
 var _log_box: VBoxContainer = null
 var _log_scroll: ScrollContainer = null
 var _voice_label: Label = null
@@ -52,6 +44,9 @@ func _start_run(seed_in: int) -> void:
 	scene = RescueScene.new(seed_in)
 	scene.log_bus.event_appended.connect(_on_log_event)
 	scene.phase_changed.connect(_on_phase_changed)
+
+	_ship.scene = scene
+	_ship.layout = scene.layout
 
 	_clear_log()
 	for e: LogEvent in scene.log_bus.events:
@@ -97,14 +92,14 @@ func _build_ui() -> void:
 
 	var margin: MarginContainer = MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 16)
-	margin.add_theme_constant_override("margin_right", 16)
-	margin.add_theme_constant_override("margin_top", 12)
-	margin.add_theme_constant_override("margin_bottom", 12)
+	for side: String in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
 	add_child(margin)
 
 	var root: VBoxContainer = VBoxContainer.new()
-	root.add_theme_constant_override("separation", 10)
+	root.add_theme_constant_override("separation", 8)
 	margin.add_child(root)
 
 	_title_label = _make_label("", TEXT, 18)
@@ -112,10 +107,22 @@ func _build_ui() -> void:
 
 	var middle: HBoxContainer = HBoxContainer.new()
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	middle.add_theme_constant_override("separation", 12)
+	middle.add_theme_constant_override("separation", 10)
 	root.add_child(middle)
 
-	middle.add_child(_build_ship_grid())
+	var ship_frame: PanelContainer = _make_panel(PANEL)
+	ship_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ship_frame.size_flags_stretch_ratio = 2.2
+	middle.add_child(ship_frame)
+
+	_ship = ShipView.new()
+	_ship.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ship.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_ship.custom_minimum_size = Vector2(560, 320)
+	_ship.room_clicked.connect(_on_room_clicked)
+	_ship.crew_clicked.connect(_on_crew_clicked)
+	ship_frame.add_child(_ship)
+
 	middle.add_child(_build_log_panel())
 
 	root.add_child(_build_voice_panel())
@@ -126,86 +133,10 @@ func _build_ui() -> void:
 	root.add_child(_status_label)
 
 
-func _build_ship_grid() -> Control:
-	var wrap: PanelContainer = _make_panel(PANEL)
-	wrap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	wrap.size_flags_stretch_ratio = 2.0
-
-	var grid: GridContainer = GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	wrap.add_child(grid)
-
-	# Built from data, ordered by grid position so the layout file is the single
-	# source of truth for the ship's shape.
-	var layout: ShipLayout = DataLoader.load_layout()
-	var ordered: Array[ShipRoom] = layout.rooms.duplicate()
-	ordered.sort_custom(func(a: ShipRoom, b: ShipRoom) -> bool:
-		if a.row != b.row:
-			return a.row < b.row
-		return a.col < b.col
-	)
-
-	for room: ShipRoom in ordered:
-		grid.add_child(_build_room_tile(room))
-
-	return wrap
-
-
-func _build_room_tile(room: ShipRoom) -> Control:
-	var panel: PanelContainer = _make_panel(ROOM_IDLE)
-	panel.custom_minimum_size = Vector2(190, 150)
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-
-	var box: VBoxContainer = VBoxContainer.new()
-	box.add_theme_constant_override("separation", 4)
-	panel.add_child(box)
-
-	var title: Label = _make_label(room.label, TEXT, 14)
-	box.add_child(title)
-
-	var body: Label = _make_label("", DIM, 12)
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(body)
-
-	var move_btn: Button = Button.new()
-	move_btn.text = "MOVE HERE"
-	move_btn.pressed.connect(_on_move_pressed.bind(room.id))
-	box.add_child(move_btn)
-
-	var free_holder: VBoxContainer = VBoxContainer.new()
-	free_holder.add_theme_constant_override("separation", 3)
-	box.add_child(free_holder)
-
-	var per_room: Dictionary = {}
-	for cid: Variant in scene_captive_ids():
-		var crew_id: String = str(cid)
-		var btn: Button = Button.new()
-		btn.text = "FREE"
-		btn.visible = false
-		btn.pressed.connect(_on_free_pressed.bind(crew_id))
-		free_holder.add_child(btn)
-		per_room[crew_id] = btn
-
-	_room_panels[room.id] = panel
-	_room_titles[room.id] = title
-	_room_bodies[room.id] = body
-	_move_buttons[room.id] = move_btn
-	_free_buttons[room.id] = per_room
-	return panel
-
-
-func scene_captive_ids() -> Array:
-	var cfg: Dictionary = DataLoader.load_scene()
-	return cfg.get("captives", [])
-
-
 func _build_log_panel() -> Control:
 	var panel: PanelContainer = _make_panel(PANEL)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.custom_minimum_size = Vector2(340, 0)
+	panel.custom_minimum_size = Vector2(320, 0)
 
 	var box: VBoxContainer = VBoxContainer.new()
 	panel.add_child(box)
@@ -228,7 +159,7 @@ func _build_voice_panel() -> Control:
 	var panel: PanelContainer = _make_panel(Color(0.09, 0.14, 0.16))
 	_voice_label = _make_label("", VOICE, 14)
 	_voice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_voice_label.custom_minimum_size = Vector2(0, 46)
+	_voice_label.custom_minimum_size = Vector2(0, 42)
 	panel.add_child(_voice_label)
 	return panel
 
@@ -289,51 +220,6 @@ func _build_ending_panel() -> Control:
 func _refresh() -> void:
 	if scene == null:
 		return
-
-	var executing: bool = scene.phase == RescueScene.Phase.EXECUTING
-	var idle: bool = scene.task == RescueScene.Task.IDLE
-	var tock_room: String = scene.tock.room if scene.tock != null else ""
-
-	for room_id: Variant in _room_panels.keys():
-		var rid: String = str(room_id)
-		var body: Label = _room_bodies[rid] as Label
-		var panel: PanelContainer = _room_panels[rid] as PanelContainer
-
-		var occupants: Array[String] = []
-		var has_captive: bool = false
-		for m: CrewMember in scene.crew_in_room(rid):
-			if m.is_tied():
-				occupants.append("%s  [TIED]" % m.display_name)
-				has_captive = true
-			elif m.is_synthetic:
-				occupants.append("%s  %d hp" % [m.display_name, m.hp])
-			else:
-				occupants.append("%s  %d hp" % [m.display_name, m.hp])
-		body.text = "\n".join(occupants)
-
-		var tint: Color = ROOM_IDLE
-		if rid == tock_room:
-			tint = ROOM_TOCK
-		elif has_captive:
-			tint = ROOM_CAPTIVE
-		_set_panel_colour(panel, tint)
-
-		var move_btn: Button = _move_buttons[rid] as Button
-		move_btn.visible = executing and idle and scene.layout.are_adjacent(tock_room, rid)
-
-		var buttons: Dictionary = _free_buttons[rid] as Dictionary
-		for crew_id: Variant in buttons.keys():
-			var cid: String = str(crew_id)
-			var btn: Button = buttons[cid] as Button
-			var m2: CrewMember = scene.get_crew(cid)
-			var can_free: bool = (
-				executing and idle and m2 != null and m2.is_tied()
-				and m2.room == rid and tock_room == rid
-			)
-			btn.visible = can_free
-			if can_free:
-				btn.text = "FREE %s" % m2.display_name
-
 	_status_label.text = _status_text()
 	_proposal_panel.visible = scene.phase == RescueScene.Phase.PROPOSAL
 
@@ -352,11 +238,13 @@ func _status_text() -> String:
 			bits.append("moving %d%%" % int(scene.task_progress() * 100.0))
 		elif scene.task == RescueScene.Task.FREEING:
 			bits.append("cutting %d%%" % int(scene.task_progress() * 100.0))
+		else:
+			bits.append("click a room to move, a captive to cut them loose")
 		if scene.hack_active:
 			bits.append("hack %4.1fs" % maxf(scene.hack_remaining, 0.0))
 		if scene.fight_active:
 			bits.append("firefight %4.1fs" % maxf(scene.fight_remaining, 0.0))
-		bits.append("PAUSED — SPACE" if scene.is_paused() else "running — SPACE to pause")
+		bits.append("PAUSED — SPACE" if scene.is_paused() else "SPACE to pause")
 
 	return "     ".join(bits)
 
@@ -383,7 +271,8 @@ func _on_log_event(event: LogEvent) -> void:
 
 
 # Every state change writes a line. GAME_SPEC_v0.2 §7a: no visual effect may
-# ever be the only indication that something happened.
+# ever be the only indication that something happened. That rule is why the
+# drawn ship view is allowed to be pretty — it is never the only channel.
 func _format(event: LogEvent) -> String:
 	var who: String = ""
 	if not event.subjects.is_empty():
@@ -431,12 +320,12 @@ func _on_plan_pressed(plan_id: String) -> void:
 		scene.choose_plan(plan_id)
 
 
-func _on_move_pressed(room_id: String) -> void:
+func _on_room_clicked(room_id: String) -> void:
 	if scene != null:
 		scene.order_move(room_id)
 
 
-func _on_free_pressed(crew_id: String) -> void:
+func _on_crew_clicked(crew_id: String) -> void:
 	if scene != null:
 		scene.order_free(crew_id)
 
@@ -472,11 +361,6 @@ func _make_label(text: String, colour: Color, size: int) -> Label:
 
 func _make_panel(colour: Color) -> PanelContainer:
 	var panel: PanelContainer = PanelContainer.new()
-	_set_panel_colour(panel, colour)
-	return panel
-
-
-func _set_panel_colour(panel: PanelContainer, colour: Color) -> void:
 	var style: StyleBoxFlat = StyleBoxFlat.new()
 	style.bg_color = colour
 	style.content_margin_left = 10
@@ -488,3 +372,4 @@ func _set_panel_colour(panel: PanelContainer, colour: Color) -> void:
 	style.corner_radius_bottom_left = 3
 	style.corner_radius_bottom_right = 3
 	panel.add_theme_stylebox_override("panel", style)
+	return panel

@@ -40,9 +40,16 @@ func _init() -> void:
 	await _settle()
 	await _shot(out_prefix + "-2-plan-chosen.png")
 
-	# Walk to the hold and start cutting, so the second half of the UI is
-	# exercised too: transit, arrival, the firefight, and the FREE buttons.
-	await _advance(sim, ["shields", "medbay", "cargo"])
+	# Catch a frame mid-corridor. Transit is the one thing a post-arrival
+	# screenshot can never show, and it is the whole point of the drawn view.
+	sim.order_move("shields")
+	await _run_seconds(sim, 1.5)
+	await _shot(out_prefix + "-2b-walking.png")
+	await _run_seconds(sim, 1.7)
+
+	# Then on to the hold, so arrival, the firefight and the crew slots are
+	# exercised too.
+	await _advance(sim, ["medbay", "cargo"])
 	await _shot(out_prefix + "-3-in-the-hold.png")
 
 	for m: CrewMember in sim.crew:

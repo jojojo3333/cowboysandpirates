@@ -26,9 +26,18 @@ start the next one without being asked.
 1. **One scene only.** `main.tscn` holds a single `Control` node named `Main`
    with `main.gd` attached. **Never create or hand-edit another `.tscn`.**
    All UI nodes are constructed in GDScript at runtime.
-2. **No addons, no plugins, no external assets.** No images, fonts, or audio.
+2. **No addons and no plugins.** For UI chrome — panels, buttons, the log —
    `ColorRect`, `Label`, `Button`, `ProgressBar`, `VBoxContainer`,
-   `HBoxContainer`, `PanelContainer` only.
+   `HBoxContainer`, `PanelContainer`, `GridContainer`, `MarginContainer`,
+   `ScrollContainer`. The ship itself is drawn: a `Control` with `_draw()`,
+   plus `Node2D`, `Polygon2D` and `Line2D` where they help.
+
+   **Imported assets are allowed only under CC0, with documented provenance.**
+   Every imported file gets an entry in `ASSETS.md` naming its source, its
+   licence and the date it was fetched. No exceptions, including "just a
+   placeholder we will swap later" — placeholder art is how unlicensed art
+   ships. Assets extracted from another game are never acceptable regardless
+   of licence claims.
 3. **Static typing everywhere.** `var hull: int = 30`, `func fire() -> void:`.
    Godot 4.7 treats several type-inference warnings as errors, so this is not a
    style preference — untyped code fails `verify static`.

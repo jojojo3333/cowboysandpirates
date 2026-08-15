@@ -1,6 +1,5 @@
 {
   "_comment": "Class definitions. Adding a class here must require ZERO GDScript changes - that is a v0.2 acceptance criterion. The Synthetic class was added after the format was written and is the live proof of that. The bonuses dict is deliberately sparse: the format carries far more than v0.2 populates.",
-
   "_bonus_keys": {
     "repair_speed_mult": "multiplier on this crew member's own repair rate",
     "repair_speed_mult_others": "multiplier on ALL OTHER crew's repair rate while this one is alive",
@@ -15,7 +14,7 @@
     "can_repair_synthetics": "may restore a DISABLED synthetic by standing in its room",
     "hack_skill": "v0.3 only - intrusion capability, unused in v0.2"
   },
-
+  "_colour_rule": "Draw colour for this class's crew marker. Content, not balance — but it lives here so that adding a seventh class stays a JSON-only change, per GAME_SPEC_v0.2 §4.",
   "classes": [
     {
       "id": "commander",
@@ -25,7 +24,8 @@
       "is_synthetic": false,
       "bonuses": {
         "repair_speed_mult_others": 1.25
-      }
+      },
+      "colour": "#e8d8a0"
     },
     {
       "id": "soldier",
@@ -36,7 +36,8 @@
       "bonuses": {
         "firefight_speed_mult": 1.25,
         "fire_damage_taken_mult": 0.5
-      }
+      },
+      "colour": "#d98b6a"
     },
     {
       "id": "engineer",
@@ -47,7 +48,8 @@
       "bonuses": {
         "repair_points_per_tick": 2,
         "can_repair_synthetics": true
-      }
+      },
+      "colour": "#7fbf8a"
     },
     {
       "id": "pilot",
@@ -57,7 +59,8 @@
       "is_synthetic": false,
       "bonuses": {
         "evasion_flat_bonus": 5
-      }
+      },
+      "colour": "#7aa9d9"
     },
     {
       "id": "medic",
@@ -67,7 +70,8 @@
       "is_synthetic": false,
       "bonuses": {
         "medbay_heal_mult": 1.5
-      }
+      },
+      "colour": "#d97fa8"
     },
     {
       "id": "synthetic",
@@ -77,7 +81,8 @@
       "is_synthetic": true,
       "bonuses": {
         "hack_skill": 0
-      }
+      },
+      "colour": "#8fd3d9"
     }
   ]
 }
