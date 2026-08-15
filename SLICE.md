@@ -4,6 +4,14 @@
 
 Build only the current slice. When it runs and is committed, stop and wait.
 
+**One mission, not a chain.** The immediate target is a single combat that a
+human can play start to finish. The encounter chain — five in `GAME_SPEC_v0.1
+§5`, six in `GAME_SPEC_v0.2 §8` — is deferred, and its length is an open number
+to be decided after the single mission has been played. Both counts in the
+specs are superseded until then. Slice 3 stays written as-is because the jump
+screen and reward numbers are still what it needs to build; only the count is
+open.
+
 ---
 
 ## Slice 0 — "It's a game" (target: 30 min)
@@ -44,8 +52,13 @@ and reach either end screen without touching the console.
   system (0–3, at 3 the system is offline). Crew in the room take 15 damage.
 - Crew in a damaged room repair 1 damage point per 4.0s.
 - Crew in an undamaged room man it: +10% to that system's effect.
-- Crew XP: 1 per 5s manning; at 20 XP the bonus doubles to +20%.
 - Crew death at 0 HP. Permanent in v0.1. Must not crash.
+
+**Crew XP is not in this slice.** It was listed here originally, but
+`GAME_SPEC_v0.1` does not mention XP and `GAME_SPEC_v0.2 §5` introduces it as
+new. XP is the first mechanic that makes a *specific* crew member
+irreplaceable, which is what v0.2 is for. v0.1's job is to prove the loop is
+fun with interchangeable crew.
 
 ## Slice 3 — The run (target: 25 min)
 

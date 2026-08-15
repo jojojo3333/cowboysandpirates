@@ -1,7 +1,7 @@
 # BUILD_PLAN.md
 
-What gets built, in what order, and the places where v0.1 and v0.2 contradict
-each other and need a decision.
+What gets built, in what order, and how the places where v0.1 and v0.2
+contradict each other were settled.
 
 ---
 
@@ -56,7 +56,8 @@ structured log. Phase B: the UI for all of it, plus the human run.
 ## v0.1 → v0.2 deltas
 
 v0.2 was written without v0.1 in front of it, and it shows. Most of these are
-ordinary version-to-version growth. Three are contradictions that need a call.
+ordinary version-to-version growth. Four points needed a call and all four are
+now decided.
 
 ### Ordinary growth — no decision needed
 
@@ -74,20 +75,20 @@ ordinary version-to-version growth. Three are contradictions that need a call.
 The Medbay numbers match exactly across both specs. That is the one place the
 two documents were clearly written with each other in view.
 
-### Contradiction 1 — how many rooms
+### Decided 1 — four rooms
 
-**v0.1 §4 specifies four systems, and `SLICE.md` slice 0 says "4 rooms per
-ship".** Before the v0.1 file surfaced, six rooms were agreed — Reactor and
-Cargo added as systemless rooms that burn — on the argument that a ship where
-every room is critical makes fire a timer rather than a spatial decision.
+**v0.1 ships four rooms: Shields, Engines, Weapons, Medbay.** As specced in
+`GAME_SPEC_v0.1 §4` and `SLICE.md` slice 0.
 
-That argument still holds, but it is a v0.2 argument: fire does not exist in
-v0.1, so the two extra rooms would be inert.
+Six rooms had been agreed earlier, before the v0.1 spec surfaced — Reactor and
+Cargo as systemless rooms that burn, on the argument that a ship where every
+room is critical makes fire a timer rather than a spatial decision. That
+argument still holds, but it is a v0.2 argument: fire does not exist in v0.1,
+so the extra rooms would be inert.
 
-**Recommendation: build v0.1 with four rooms as specced. Expand to six in v0.2,
-in the same slice that adds fire.** `data/ship_layout.json` gains two entries
-and an adjacency list; nothing else changes. The 2×3 grid stands as the v0.2
-target layout:
+**The expansion to six happens in v0.2, in the same slice that adds fire.**
+`data/ship_layout.json` gains two entries and an adjacency list; nothing else
+changes. The v0.2 target layout:
 
 ```
   Weapons ── Shields ── Medical
@@ -95,37 +96,44 @@ target layout:
   Reactor ── Engines ──  Cargo
 ```
 
-### Contradiction 2 — v0.2 deletes the two text events
+### Decided 2 — the two text events stay in the tree
 
-**v0.1 encounter 2 is a Distress beacon and encounter 4 is a Derelict hauler,
-both with choices and consequences. `GAME_SPEC_v0.2 §8` replaces the run with
-"6 combats, all fights, no events."**
+**v0.1 encounter 2 is a Distress beacon and encounter 4 is a Derelict hauler.
+`GAME_SPEC_v0.2 §8` calls for "6 combats, all fights, no events".**
 
-Read literally, v0.2 deletes two working features to make room for fire and
-crew death. That may well be deliberate — the stated reason is that fire and
-crew death need room to play out, which is a real argument.
+Read literally that deletes two working features. **Instead: keep both events
+implemented, behind a flag that v0.2 turns off.** The v0.2 run is combats only
+as specced; the event code stays.
 
-But `VOICE_AND_EVENTS.md §2` uses `derelict_hauler` as *the* worked example of
-the v0.4 event format, line pools and all. Deleting the v0.1 implementation and
-rebuilding it in v0.4 is throwing away the only event code that will ever have
-been playtested.
+The reason is `VOICE_AND_EVENTS.md §2`, which uses `derelict_hauler` as *the*
+worked example of the v0.4 event format, line pools and all. Deleting the v0.1
+implementation and rebuilding it in v0.4 throws away the only event code that
+will ever have been playtested.
 
-**Recommendation: keep both events implemented, behind a flag that v0.2 turns
-off.** The v0.2 run is six combats as specced; the event code stays in the tree
-and is the seed of the v0.4 system rather than a rewrite.
+### Decided 3 — crew XP is v0.2
 
-### Contradiction 3 — is crew XP in v0.1 or v0.2
+**Removed from `SLICE.md` slice 2.** `GAME_SPEC_v0.1` never mentioned XP;
+`GAME_SPEC_v0.2 §5` introduces it as new. The slice plan had pulled a v0.2
+feature forward.
 
-**`SLICE.md` slice 2 includes "Crew XP: 1 per 5s manning; at 20 XP the bonus
-doubles to +20%". `GAME_SPEC_v0.1 §4` does not mention XP at all.
-`GAME_SPEC_v0.2 §5` introduces it as new.**
+v0.1's job is to prove the loop is fun with interchangeable crew. XP is the
+first mechanic that makes a *specific* crew member irreplaceable, which is
+exactly what v0.2 §0 says v0.2 is for.
 
-The slice plan pulled a v0.2 feature into v0.1.
+### Decided 4 — one mission, and the chain length is now open
 
-**Recommendation: drop XP from slice 2.** v0.1's job is to prove the loop is fun
-with interchangeable crew; XP is the first mechanic that makes a *specific* crew
-member irreplaceable, which is exactly what v0.2 §0 says v0.2 is for. Building
-it early muddies what v0.1 is supposed to answer.
+**The immediate target is a single playable combat, not an encounter chain.**
+`SLICE.md` slice 0 already describes exactly this, so nothing in the build order
+changes; what changes is that slices 1–3 are not queued behind it as a foregone
+conclusion.
+
+**Both encounter counts are superseded**: five in `GAME_SPEC_v0.1 §5` and six in
+`GAME_SPEC_v0.2 §8`. The number is an open decision to be made after the single
+mission has been played, because how long a run should be is a pacing question
+and pacing is not machine-checkable.
+
+Everything else in `GAME_SPEC_v0.1 §5` still stands — the enemy templates, the
+jump-screen options, the scrap rewards. Only the count is open.
 
 ---
 

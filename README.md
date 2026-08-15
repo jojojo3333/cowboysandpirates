@@ -20,14 +20,14 @@ tools/verify.sh          # both verify commands; must be green before any commit
 
 Start with **`CLAUDE.md`** — the working agreement, the Godot 4 gotchas, and the
 verify contract. Then **`SLICE.md`**: the current slice is the only thing being
-built. Then **`BUILD_PLAN.md`**, which covers the three places v0.1 and v0.2
-contradict each other.
+built. Then **`BUILD_PLAN.md`**, which records how the four places v0.1 and v0.2
+contradicted each other were settled.
 
 | Document | What it is |
 |----------|------------|
 | `CLAUDE.md` | Working agreement. Read first. |
 | `SLICE.md` | The v0.1 build order. Current slice at the top. |
-| `BUILD_PLAN.md` | Build phases, and the v0.1 → v0.2 deltas that need decisions. |
+| `BUILD_PLAN.md` | Build phases, and the settled v0.1 → v0.2 deltas. |
 | `ARCHITECTURE.md` | How `sim/` and `ui/` divide, and why. |
 | `GAME_SPEC_v0.1.md` | The combat loop. Authoritative. Nothing built yet. |
 | `GAME_SPEC_v0.2.md` | The crew layer. Authoritative for v0.2. Not started. |
@@ -36,7 +36,9 @@ contradict each other.
 
 ## Status
 
-Pre-v0.1, slice 0 not started. Specification and verification harness only —
-no game code yet.
-`tools/verify.sh` is green and its data-contract check is verified to fail on
+Slice 0 is the current target: one playable combat. The tree holds the specs,
+the boot scaffold (`main.tscn` + `main.gd`, prints `BOOT OK`), and the
+verification harness. No game code yet.
+
+`tools/verify.sh` is green, and its data-contract check is verified to fail on
 broken input.
