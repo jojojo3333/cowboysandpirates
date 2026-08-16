@@ -293,7 +293,11 @@ func _on_log_event(event: LogEvent) -> void:
 		colour = WARN
 	elif event.severity == LogEvent.CRITICAL:
 		colour = CRIT
-	_append_log_line("%5.1f  %s" % [event.t, _format(event)], colour)
+	# No timestamp. The mission clock is a tool for the balance harness, not
+	# something a player needs, and it actively misleads: leave the game running
+	# unpaused while you make a coffee and the log reads "812.4s BOARDER DOWN",
+	# which says nothing except how long you were away.
+	_append_log_line(_format(event), colour)
 
 
 # Every state change writes a line. GAME_SPEC_v0.2 §7a: no visual effect may

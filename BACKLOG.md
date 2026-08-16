@@ -33,6 +33,36 @@ commands green, balance report **40.3s** for both plans.
 
 ---
 
+## What the balance number is, and is not
+
+You will see **40.3s** quoted everywhere. It has been reported at you like a
+score, which was misleading. Here is what it actually is.
+
+`tools/sim_runner.gd` plays the rescue mission 200 times with no UI attached, as
+fast as the machine can. Each run it measures how much **in-game** time passed
+from the plan being chosen to the last captive being freed. 40.3s is that
+figure. The 200 runs take about two seconds of real time.
+
+**It is a canary, not a target.** Its only value is: *did it move when nothing
+should have moved it?* The simulation survived two complete renderer rewrites
+and a total ship replacement without breaking, and this number is how that was
+known. When it did move, it moved for reasons that were stated:
+
+| | |
+|---|---|
+| 39.4s | the original six-room ship |
+| 42.4s | new thirteen-room ship — turret control went three hops from the hold to four |
+| 40.3s | travel started costing distance instead of a flat fee per room |
+
+**Nobody is aiming for a particular number.** There is no "good" value. A change
+that moves it is fine as long as the reason is understood; a change that moves
+it *unexpectedly* is a bug. `CLAUDE.md` calls these figures [PLAY-GATED] —
+report them, never tune them.
+
+The player never sees any of this. The log no longer prints mission timestamps
+either: leaving the game unpaused while you make coffee produced lines like
+"812.4s BOARDER DOWN", which tells you nothing except how long you were away.
+
 ## The queue
 
 Ordered. Anything marked **[OUTSOURCEABLE]** has a brief further down.
