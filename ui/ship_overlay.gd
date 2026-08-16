@@ -14,6 +14,7 @@ class_name ShipOverlay
 # readability of state outranks the lighting, per rule 8.
 
 const COL_SELECT: Color = Color(0.62, 0.86, 0.94)
+const COL_HOVER: Color = Color(0.94, 0.90, 0.72)
 const COL_PATH: Color = Color(0.52, 0.80, 0.88, 0.75)
 const COL_TEXT: Color = Color(0.90, 0.93, 0.96)
 const COL_TIED: Color = Color(0.86, 0.46, 0.40)
@@ -24,6 +25,8 @@ var layout: ShipLayout = null
 var view: ShipView = null
 
 var clock: float = 0.0
+var hover_room: String = ""
+var hover_crew: String = ""
 var _font: Font = null
 
 
@@ -38,6 +41,7 @@ func _draw() -> void:
 	if scene == null or layout == null or view == null:
 		return
 
+	_draw_hover()
 	_draw_target()
 	_draw_route()
 	_draw_crew_state()
@@ -57,6 +61,25 @@ func _draw_target() -> void:
 	draw_colored_polygon(room.polygon, Color(COL_SELECT, 0.10))
 	var loop: PackedVector2Array = room.polygon + PackedVector2Array([room.polygon[0]])
 	draw_polyline(loop, Color(COL_SELECT, pulse), 3.0)
+
+
+# What the mouse is over. Nothing on this ship reacted until it was clicked,
+# which left the player unable to tell painted detail from a live compartment.
+func _draw_hover() -> void:
+	if hover_crew != "":
+		for member: CrewMember in view.all_crew():
+			if member.id == hover_crew:
+				draw_arc(view.crew_position(member), 40.0, 0.0, TAU, 32, Color(COL_HOVER, 0.85), 3.0)
+				return
+		return
+	if hover_room == "":
+		return
+	var room: ShipRoom = layout.get_room(hover_room)
+	if room == null or room.polygon.size() < 3:
+		return
+	draw_colored_polygon(room.polygon, Color(COL_HOVER, 0.055))
+	var loop: PackedVector2Array = room.polygon + PackedVector2Array([room.polygon[0]])
+	draw_polyline(loop, Color(COL_HOVER, 0.34), 2.5)
 
 
 # The whole ordered route, through the doorways the crew actually walk through.
@@ -108,16 +131,16 @@ func _draw_label(member: CrewMember, at: Vector2) -> void:
 	var name: String = parts[parts.size() - 1] if parts.size() > 0 else member.display_name
 	if member.hp < member.max_hp:
 		name += "  %d" % member.hp
+	# Restraint is carried by the bars drawn across the body, not by this plate.
+	# Appending "TIED" here made the plates wide enough to run into each other,
+	# and rule 8 is already satisfied: the bars are a shape, and the log says it
+	# in words.
 
 	var width: float = _font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
-	var plate: Rect2 = Rect2(at + Vector2(-width * 0.5 - 9.0, 52.0), Vector2(width + 18.0, 33.0))
+	var plate: Rect2 = Rect2(at + Vector2(-width * 0.5 - 9.0, 56.0), Vector2(width + 18.0, 33.0))
 	draw_rect(plate, COL_PLATE_BG)
 	draw_string(
-		_font, at + Vector2(-width * 0.5, 77.0), name,
+		_font, at + Vector2(-width * 0.5, 81.0), name,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 26, COL_TEXT
 	)
-	if member.is_tied():
-		draw_string(
-			_font, at + Vector2(-45.0, 106.0), "TIED",
-			HORIZONTAL_ALIGNMENT_CENTER, 90.0, 22, COL_TIED
-		)
+

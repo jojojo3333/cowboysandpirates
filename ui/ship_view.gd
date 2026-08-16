@@ -29,7 +29,13 @@ const LIGHT_WARM: Color = Color(1.0, 0.94, 0.84)
 const LIGHT_REACTOR: Color = Color(1.0, 0.68, 0.34)
 const CREW_HIT_RADIUS: float = 48.0
 const CREW_TEX: int = 96
-const SLOT_SPREAD: float = 118.0
+const SLOT_SPREAD: float = 152.0
+
+# How far the ship may exceed the panel height before it is scaled back. The
+# plate carries empty space above and below the hull, so a little overflow costs
+# nothing visible and buys a much larger ship.
+const SLOT_ROW: float = 172.0
+const OVERFLOW: float = 1.30
 
 var scene: RescueScene = null
 var layout: ShipLayout = null
@@ -43,6 +49,8 @@ var _crew_sprites: Dictionary = {}
 var _class_colours: Dictionary = {}
 var _clock: float = 0.0
 var _fit_scale: float = 1.0
+var _hover_room: String = ""
+var _hover_crew: String = ""
 
 
 func _ready() -> void:
@@ -155,6 +163,8 @@ func _process(delta: float) -> void:
 	_pulse_lights()
 
 	_overlay.clock = _clock
+	_overlay.hover_room = _hover_room
+	_overlay.hover_crew = _hover_crew
 	_overlay.queue_redraw()
 
 
@@ -162,11 +172,19 @@ func _process(delta: float) -> void:
 
 # The whole ship scales to fit the panel. Everything downstream works in plate
 # pixels, so no other code has to know the window size.
+#
+# Width first, not the smaller of the two. The plate is 2.16:1 and the panel is
+# nearer 1.8:1, so fitting both axes letterboxed the ship into the middle third
+# of its own frame. Filling the width and letting the plate's own empty margin
+# crop off the top and bottom uses the space the ship is actually in. Overflow
+# is capped so a very short panel cannot swallow the hull.
 func _fit() -> void:
 	if size.x < 1.0 or size.y < 1.0:
 		return
 	var plate: Vector2 = layout.plate_size
-	_fit_scale = minf(size.x / plate.x, size.y / plate.y)
+	var by_width: float = size.x / plate.x
+	var by_height: float = size.y / plate.y
+	_fit_scale = minf(by_width, by_height * OVERFLOW)
 	_world.scale = Vector2(_fit_scale, _fit_scale)
 	_world.position = ((size - plate * _fit_scale) * 0.5).floor()
 
@@ -231,7 +249,9 @@ func _slot(room: ShipRoom, index: int, total: int) -> Vector2:
 	var in_row: int = mini(per_row, total - row * per_row)
 
 	var step_x: float = minf(SLOT_SPREAD, bounds.size.x / float(per_row + 1))
-	var step_y: float = minf(SLOT_SPREAD, bounds.size.y / float(rows + 1))
+	# Rows need more room than columns: the name plate hangs below each figure
+	# and at column spacing the plates landed on the heads of the row beneath.
+	var step_y: float = minf(SLOT_ROW, bounds.size.y / float(rows + 1))
 	return centre + Vector2(
 		(float(col) - (float(in_row) - 1.0) * 0.5) * step_x,
 		(float(row) - (float(rows) - 1.0) * 0.5) * step_y
@@ -296,10 +316,9 @@ func _sync_crew() -> void:
 			sprite.position = at
 			sprite.rotation = 0.0
 
-		var tint: Color = _class_colours.get(member.class_id, Color(0.72, 0.75, 0.80))
-		if member.is_tied():
-			tint = tint.lerp(Color(0.55, 0.30, 0.28), 0.5).darkened(0.15)
-		sprite.modulate = tint
+		# The suit colour is baked into the texture, so modulate is only used to
+		# knock a restrained crew member down — never to carry identity.
+		sprite.modulate = Color(0.62, 0.55, 0.55) if member.is_tied() else Color.WHITE
 
 
 # Placeholder crew art, generated once into a texture rather than drawn every
@@ -308,42 +327,65 @@ func _sync_crew() -> void:
 # nothing else.
 func _make_crew_sprite(member: CrewMember) -> Sprite2D:
 	var sprite: Sprite2D = Sprite2D.new()
-	sprite.texture = _crew_texture(member.is_synthetic)
+	var colour: Color = _class_colours.get(member.class_id, Color(0.72, 0.75, 0.80))
+	sprite.texture = _crew_texture(member.is_synthetic, colour)
 	_crew_layer.add_child(sprite)
 	return sprite
 
 
-func _crew_texture(synthetic: bool) -> Texture2D:
+func _crew_texture(synthetic: bool, suit: Color) -> Texture2D:
 	var s: int = CREW_TEX
 	var img: Image = Image.create(s, s, false, Image.FORMAT_RGBA8)
-	var centre: Vector2 = Vector2(float(s) * 0.5, float(s) * 0.5)
+	var mid: Vector2 = Vector2(float(s), float(s)) * 0.5
+	var unit: float = float(s) * 0.5
 
+	# A figure seen from directly above is shoulders with a head on top, not a
+	# disc. The first attempt was a disc with a stripe through it and read as a
+	# lozenge; this reads as a person at the size compartments actually give us.
 	for y: int in range(s):
 		for x: int in range(s):
-			var p: Vector2 = Vector2(float(x) + 0.5, float(y) + 0.5)
-			var d: float = p.distance_to(centre)
-			# Shoulders: a slightly wider, darker disc under the helmet.
-			var shoulder: float = float(s) * 0.44
-			var helmet: float = float(s) * 0.32
-			if d > shoulder:
-				continue
-			if d > helmet:
-				img.set_pixel(x, y, Color(0.10, 0.11, 0.13, 1.0))
-				continue
-			# Helmet, shaded from the top so it reads as a dome.
-			var shade: float = clampf(1.0 - (p.y - centre.y + helmet) / (helmet * 2.2), 0.22, 0.72)
-			img.set_pixel(x, y, Color(shade, shade, shade, 1.0))
+			var p: Vector2 = (Vector2(float(x) + 0.5, float(y) + 0.5) - mid) / unit
 
-	# A visor stripe reads as a face direction at this size; TOCK gets a square
-	# lens instead, because he is a machine and must not be mistaken for crew.
-	var eye_y: int = int(float(s) * 0.44)
-	for x: int in range(int(float(s) * 0.34), int(float(s) * 0.66)):
-		img.set_pixel(x, eye_y, Color(0.05, 0.06, 0.07, 1.0))
-		img.set_pixel(x, eye_y + 1, Color(0.05, 0.06, 0.07, 1.0))
-	if synthetic:
-		for x: int in range(int(float(s) * 0.38), int(float(s) * 0.62)):
-			img.set_pixel(x, eye_y - 4, Color(0.05, 0.06, 0.07, 1.0))
-			img.set_pixel(x, eye_y + 5, Color(0.05, 0.06, 0.07, 1.0))
+			# Shoulders: an ellipse wider than it is deep.
+			var shoulder: float = (p.x / 0.96) * (p.x / 0.96) + (p.y / 0.74) * (p.y / 0.74)
+			if shoulder > 1.0:
+				continue
+
+			var head: float = p.length() / 0.44
+			var colour: Color
+			if head <= 1.0:
+				# Helmet dome, lit from the top-left to match the room lights.
+				var lit: float = clampf(0.30 - (p.x * 0.15 + p.y * 0.18), 0.07, 0.36)
+				colour = Color(lit, lit, lit, 1.0)
+				# Specular pip, which is what sells a curved surface at 30 px.
+				if (p - Vector2(-0.15, -0.18)).length() < 0.11:
+					colour = Color(0.50, 0.52, 0.56, 1.0)
+			else:
+				# Suit: darker, and darker still toward the outside edge so the
+				# silhouette holds against a bright compartment floor.
+				# The class colour lives here and nowhere else. Modulating the
+				# whole sprite tinted the helmet too and turned every crew member
+				# back into the coloured disc this was meant to replace.
+				var falloff: float = clampf(1.05 - shoulder * 0.62, 0.30, 1.0)
+				colour = Color(
+					suit.r * 0.30 * falloff, suit.g * 0.30 * falloff, suit.b * 0.30 * falloff, 1.0
+				)
+
+			# Soft edge rather than a hard jagged one; these are scaled down a
+			# long way and aliasing on a 96 px source is very visible.
+			var edge: float = clampf((1.0 - shoulder) * 7.0, 0.0, 1.0)
+			colour.a = edge
+			img.set_pixel(x, y, colour)
+
+	# TOCK is a machine and must never be mistaken for crew: a hard rectangular
+	# sensor bar instead of a visor slit.
+	var bar_y0: int = int(float(s) * (0.40 if synthetic else 0.44))
+	var bar_y1: int = int(float(s) * (0.50 if synthetic else 0.48))
+	var bar_x0: int = int(float(s) * (0.33 if synthetic else 0.37))
+	var bar_x1: int = int(float(s) * (0.67 if synthetic else 0.63))
+	for y: int in range(bar_y0, bar_y1):
+		for x: int in range(bar_x0, bar_x1):
+			img.set_pixel(x, y, Color(0.06, 0.07, 0.09, 1.0))
 
 	return ImageTexture.create_from_image(img)
 
@@ -363,6 +405,13 @@ func _pulse_lights() -> void:
 # --- input -----------------------------------------------------------------
 
 func _gui_input(event: InputEvent) -> void:
+	# Hover feedback. Without it nothing on the ship reacts until it is clicked,
+	# and a player cannot tell what is clickable from what is painted on.
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	if motion != null:
+		_update_hover(to_plate(motion.position))
+		return
+
 	var click: InputEventMouseButton = event as InputEventMouseButton
 	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
 		return
@@ -384,3 +433,24 @@ func _gui_input(event: InputEvent) -> void:
 			room_clicked.emit(room.id)
 			accept_event()
 			return
+
+
+func _update_hover(at: Vector2) -> void:
+	if scene == null or layout == null:
+		return
+	_hover_crew = ""
+	_hover_room = ""
+	for member: CrewMember in all_crew():
+		if at.distance_to(crew_position(member)) <= CREW_HIT_RADIUS:
+			_hover_crew = member.id
+			return
+	for room: ShipRoom in layout.rooms:
+		if room.contains(at):
+			_hover_room = room.id
+			return
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_MOUSE_EXIT:
+		_hover_room = ""
+		_hover_crew = ""
