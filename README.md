@@ -45,8 +45,8 @@ contradicted each other were settled.
 | `SLICE.md` | The v0.1 build order. Current slice at the top. |
 | `BUILD_PLAN.md` | Build phases, and the settled v0.1 → v0.2 deltas. |
 | `ARCHITECTURE.md` | How `sim/` and `ui/` divide, and why. |
-| `GAME_SPEC_v0.1.md` | The combat loop. Authoritative. Nothing built yet. |
-| `GAME_SPEC_v0.2.md` | The crew layer. Authoritative for v0.2. Not started. |
+| `GAME_SPEC.md` | The combat loop. Authoritative. Nothing built yet. |
+| `GAME_SPEC.md` | The crew layer. Authoritative for v0.2. Not started. |
 | `SETTING.md` | Sol 2100: factions, geography, and the do-not-copy boundaries. |
 | `VOICE_AND_EVENTS.md` | Narrative and audio design. v0.4 — only §6 is built now. |
 

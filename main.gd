@@ -1,7 +1,7 @@
 extends Control
 
 # The only script attached to the only scene. Every Control below is built in
-# GDScript at runtime — CLAUDE.md constraint 1. No .tscn is ever created or
+# GDScript at runtime, because the layout is generated from data. No .tscn is
 # hand-edited beyond main.tscn itself.
 #
 # This holds no authoritative state: everything it draws it reads from `scene`,

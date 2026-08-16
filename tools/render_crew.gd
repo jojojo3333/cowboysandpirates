@@ -23,7 +23,8 @@ extends SceneTree
 # which is exactly the blob an earlier hand-drawn version produced. The tilt
 # keeps the top-down read while leaving enough body to recognise a person.
 #
-# No .tscn is created — the whole scene is built here at runtime, per rule 1.
+# The whole scene is built here at runtime — it is a throwaway render rig, so
+# there is nothing worth saving as a scene.
 
 const SRC_DIR: String = "res://tools/crew_src/"
 const OUT_DIR: String = "res://assets/crew/"

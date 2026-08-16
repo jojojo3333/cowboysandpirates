@@ -4,7 +4,7 @@ class_name ShipView
 # The ship view. The ship is a painted plate; this builds a small Node2D world
 # on top of it and lights it with the engine.
 #
-# CLAUDE.md rule 2: hull, compartment floors, bulkheads and doors come from
+# The ship is art: hull, compartment floors, bulkheads and doors come from
 # assets/ship/hull_plate.png. Nothing here draws them. What this file owns is
 # the scene graph — plate, lights, particles, crew sprites — plus hit-testing
 # and the mapping between plate pixels and screen pixels. Changing state is
@@ -15,7 +15,9 @@ class_name ShipView
 # go dark, which is a state change the player reads instantly and which the log
 # also records in words.
 #
-# No .tscn is created — every node here is built in code, per rule 1.
+# The node tree is built in code because it is generated from the room data,
+# not because scenes are off-limits. If a hand-authored scene is ever the
+# clearer way to express part of this, use one.
 
 signal room_clicked(room_id: String)
 signal crew_clicked(crew_id: String)

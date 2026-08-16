@@ -3,7 +3,7 @@ class_name ShipOverlay
 
 # Everything that changes, drawn on top of the ship plate in plate coordinates.
 #
-# CLAUDE.md rule 2: the plate is the ship — hull, compartment floors, bulkheads
+# The plate is the ship — hull, compartment floors, bulkheads
 # and doors are art and are not drawn here. What is drawn here is state:
 # selection, the ordered route, the destination, restraint markers, name plates
 # and progress bars. The test is whether it would be identical in a screenshot
@@ -11,7 +11,7 @@ class_name ShipOverlay
 #
 # This node is deliberately unshaded. The lights in ShipView exist to make the
 # hull read as metal, and they must not dim a name plate or a progress bar —
-# readability of state outranks the lighting, per rule 8.
+# readability of state outranks the lighting.
 
 const COL_SELECT: Color = Color(0.62, 0.86, 0.94)
 const COL_HOVER: Color = Color(0.94, 0.90, 0.72)
@@ -114,7 +114,7 @@ func _draw_crew_state() -> void:
 		_draw_label(member, at)
 
 		# A bound crew member gets a visible restraint, not only a duller
-		# colour — CLAUDE.md rule 8: nothing that matters is colour alone.
+		# colour: nothing that matters may be carried by colour alone.
 		# Below the figure's feet, not across it. At y=0 this ran through the
 		# chest and read as part of the sprite rather than as something done to
 		# the person — and now that the crew are recognisable people, a bar
@@ -141,8 +141,7 @@ func _draw_label(member: CrewMember, at: Vector2) -> void:
 		name += "  %d" % member.hp
 	# Restraint is carried by the bars drawn across the body, not by this plate.
 	# Appending "TIED" here made the plates wide enough to run into each other,
-	# and rule 8 is already satisfied: the bars are a shape, and the log says it
-	# in words.
+	# the bars are a shape and the log says it in words, so nothing is lost.
 
 	var width: float = _font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
 	var plate: Rect2 = Rect2(at + Vector2(-width * 0.5 - 9.0, 68.0), Vector2(width + 18.0, 33.0))

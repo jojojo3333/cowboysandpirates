@@ -1,42 +1,23 @@
 # ASSETS.md
 
-Provenance record for every imported file, required by `CLAUDE.md` rule 2.
+Provenance record for every imported file.
 
 **Currently: one ship plate plus its derived normal map.** The hull, the
 compartment floors, the bulkheads and the doors are all art. `ui/ship_view.gd`
 draws none of them; it builds the scene graph and lights it. `ui/ship_overlay.gd`
 draws state only.
 
-The three Kenney station props that used to sit in the medbay are gone. The
-plate has real furniture drawn into it, and four isometric pieces dropped at
-arbitrary coordinates over a top-down painting looked exactly as bad as that
-description suggests.
+## What may be committed
 
-**That split was wrong and this file previously said so in the other direction.**
-It claimed the sprite count in a game like this is small and that everything
-else is geometry and lighting. Checking how the reference games are actually
-built shows the opposite: FTL ships are a hand-drawn `ship_base` PNG plus one
-authored PNG per interior room, positioned by a layout file; Void War's hull
-detail is authored pixel art by a contract artist. The art comes first and the
-data describes the art. Drawing the ship from primitives has a ceiling that more
-primitives do not raise. See `SLICE.md`, "Where the ship art has to come from".
+Anything with its provenance recorded in the table below. Two normal sources:
+**CC0** for anything fetched from the internet, and **owner-supplied** for art
+the project owner generates or commissions and hands over.
 
-## The rule
-
-An imported asset may enter this repository only if it is **CC0** and appears
-in the table below. No exceptions, including "just a placeholder we will swap
-later" — placeholder art is the normal way unlicensed art ends up shipped.
-
-**Assets extracted from another game are never acceptable**, whatever the
-extraction tool makes technically possible and whatever the intended lifespan.
-That includes GameMaker `data.win` files, Unity asset bundles and unpacked
-`.pck` archives. Those files are the developer's copyrighted artwork; this
-repository is public and publishes to GitHub Pages, so adding one is
-distribution, and git history keeps it after deletion.
-
-Studying another game to understand *why* something reads well is fine and
-encouraged. Copying the file is not. Same principle as `SETTING.md §6`: take
-the shape, never the specifics.
+Two things stay out, and both are about legal exposure rather than taste: files
+extracted from another game, and art produced from a prompt that names a
+protected character, ship, logo or property. This repository is public and
+publishes to GitHub Pages, so committing either is distribution, and git history
+keeps it after deletion.
 
 ## Vetted CC0 sources
 
@@ -59,27 +40,9 @@ because collections drift.
 | `assets/ui/kenney_fantasy_borders/**` (140 files) | Kenney *Fantasy UI Borders* 1.0 | CC0 1.0 | 2026-08-16 | 9-slice panel and border frames, not yet wired up |
 | `tools/crew_src/*.glb` (12 files) | Kenney *Mini Characters* 1.0, GLB format | CC0 1.0 | 2026-08-15 | Render source, kept so the pipeline can be re-run |
 
-**On the plate's provenance.** It is model-generated art, commissioned and
-supplied by the project owner, who directed its use. That is not CC0 with
-third-party provenance, which is what the rule above describes, so the rule now
-carries an explicit second case — see "Owner-supplied art" below.
-
-An earlier plate in the same series was generated from a prompt naming Serenity
-from *Firefly*. That one is **not** in this repository and must not be: the
-documented intent to reproduce a protected design is the exposure, whatever the
-result looks like. The plate committed here comes from a prompt describing shape
-language only, which is the whole reason the spec below is written the way it is.
-
-## Owner-supplied art
-
-Art the project owner generates or commissions and hands over directly may be
-committed, provided this file records what it is, where it came from, and the
-prompt or brief that produced it. It is not CC0 and must not be described as
-such. The CC0 rule above still governs anything fetched from the internet.
-
-Two things this permission does not cover, ever: art produced from a prompt that
-names a protected character, ship, logo or property; and files extracted from
-another game.
+The plate is model-generated art, supplied by the project owner. Its prompt
+describes shape language only and names no property — which is why the spec
+below is written the way it is.
 
 ## Ship plate spec — what the renderer needs from a ship image
 
@@ -223,7 +186,7 @@ eight facings** — so a `Sprite2D` picks a cell with `hframes`/`vframes`/`frame
 the sheet is sliced wrongly and crew animate through their neighbours' frames.
 
 `render_crew.gd` builds a `SubViewport`, an orthographic `Camera3D` and two
-`DirectionalLight3D`s in code — **no `.tscn`**, so rule 1 holds. Two details
+`DirectionalLight3D`s in code. Two details
 that are not obvious and cost a re-render each:
 
 - The camera looks down at **62°, not straight down.** A pure overhead view of a
