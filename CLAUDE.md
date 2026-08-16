@@ -148,6 +148,8 @@ it passed.**
 | `ASSETS.md` | Every imported file, the ship plate spec, the render pipeline |
 | `SETTING.md` | Sol in 2100 — regions, factions, tone |
 | `VOICE_AND_EVENTS.md` | Writing and event structure. Only §6 is built. |
+| `world/` | **The owner's folder.** Storyboard, crew, missions, world. Prose in, JSON out — never the reverse without saying so. |
+| `assets/` | **The shared drop.** Art goes in, gets recorded in `ASSETS.md`, gets wired up. |
 
 `GAME_SPEC_v0.1.md`, `GAME_SPEC_v0.2.md` and `BUILD_PLAN.md` were merged away —
 they had grown overlapping goals, non-goals, determinism and acceptance

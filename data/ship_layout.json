@@ -1,66 +1,226 @@
 {
-  "_comment": "Room adjacency plus room shapes traced from the ship plate. The simulation reads adjacency and nothing else — polygons, doors and the plate are for the viewer. Ids must not change: scene scripts and save data key off them.",
-
-  "_plate": "Compartments are drawn by assets/ship/hull_plate.png. Nothing in ui/ draws hull, floors or bulkheads any more (CLAUDE.md rule 2). Polygon and door coordinates are in plate pixels, so they are independent of window size — the viewer scales the whole ship to fit.",
-
-  "_layout": "Bow to stern, left to right on the plate: medbay, shields, weapons, reactor, engines, cargo. Assignments follow what the art shows — the big circular emitter is shields, the ammunition racks are weapons, the glowing core is the reactor, the pump assembly is engines, the crates are cargo. The compartments sit in a line, so adjacency is a chain. It used to be a 3x2 ring, which no ship shaped like this could have.",
-
+  "_comment": "Room adjacency plus room shapes traced from the ship plate. The simulation reads adjacency and nothing else \u2014 polygons, doors and the plate are for the viewer. Ids must not change: scene scripts and save data key off them.",
+  "_plate": "Compartments are drawn by assets/ship/hull_plate.png. Nothing in ui/ draws hull, floors or bulkheads. Polygon and door coordinates are in plate pixels, so they are independent of window size.",
+  "_layout": "Six compartments picked off a much larger deck plan \u2014 the plate has roughly twenty. First pass, chosen to keep the chain medbay-shields-weapons-reactor-engines-cargo and therefore the 3-hop weapons-to-cargo route the rescue scene is balanced around. Cargo and engines are the two biggest because five crew plus their name plates need the room. Refining the outlines, or adding the wanted rooms (pilot deck, turret control, robot recharge, aqua-farming, O2), is a deliberate content change: it moves the balance numbers.",
   "plate": "res://assets/ship/hull_plate.png",
   "plate_normal": "res://assets/ship/hull_plate_normal.png",
-  "plate_size": [1848, 855],
-
+  "plate_size": [
+    1774,
+    887
+  ],
   "rooms": [
     {
       "id": "medbay",
       "label": "MEDBAY",
       "system": "medbay",
-      "polygon": [[258, 252], [408, 254], [408, 578], [262, 582], [186, 478], [186, 366]],
-      "adjacent": ["shields"]
+      "polygon": [
+        [
+          290,
+          330
+        ],
+        [
+          448,
+          330
+        ],
+        [
+          448,
+          438
+        ],
+        [
+          290,
+          438
+        ]
+      ],
+      "adjacent": [
+        "shields"
+      ]
     },
     {
       "id": "shields",
       "label": "SHIELDS",
       "system": "shields",
-      "polygon": [[470, 214], [648, 214], [663, 252], [663, 583], [648, 618], [470, 618], [432, 568], [432, 262]],
-      "adjacent": ["medbay", "weapons"]
+      "polygon": [
+        [
+          505,
+          248
+        ],
+        [
+          642,
+          248
+        ],
+        [
+          642,
+          358
+        ],
+        [
+          505,
+          358
+        ]
+      ],
+      "adjacent": [
+        "medbay",
+        "weapons"
+      ]
     },
     {
       "id": "weapons",
       "label": "WEAPONS",
       "system": "weapons",
-      "polygon": [[702, 154], [948, 154], [963, 192], [963, 618], [938, 652], [702, 652], [674, 608], [674, 192]],
-      "adjacent": ["shields", "reactor"]
+      "polygon": [
+        [
+          665,
+          238
+        ],
+        [
+          898,
+          238
+        ],
+        [
+          898,
+          382
+        ],
+        [
+          665,
+          382
+        ]
+      ],
+      "adjacent": [
+        "shields",
+        "reactor"
+      ]
     },
     {
       "id": "reactor",
       "label": "REACTOR",
       "system": "",
-      "polygon": [[1000, 238], [1104, 238], [1118, 272], [1118, 563], [1104, 598], [1000, 598], [986, 563], [986, 272]],
-      "adjacent": ["weapons", "engines"]
+      "polygon": [
+        [
+          668,
+          552
+        ],
+        [
+          898,
+          552
+        ],
+        [
+          898,
+          718
+        ],
+        [
+          668,
+          718
+        ]
+      ],
+      "adjacent": [
+        "weapons",
+        "engines"
+      ]
     },
     {
       "id": "engines",
       "label": "ENGINES",
       "system": "engines",
-      "polygon": [[1146, 218], [1244, 218], [1256, 252], [1256, 578], [1244, 610], [1146, 610], [1132, 578], [1132, 252]],
-      "adjacent": ["reactor", "cargo"]
+      "polygon": [
+        [
+          1192,
+          486
+        ],
+        [
+          1420,
+          486
+        ],
+        [
+          1420,
+          642
+        ],
+        [
+          1192,
+          642
+        ]
+      ],
+      "adjacent": [
+        "reactor",
+        "cargo"
+      ]
     },
     {
       "id": "cargo",
       "label": "CARGO",
       "system": "",
-      "polygon": [[1302, 182], [1678, 182], [1698, 218], [1698, 598], [1678, 638], [1302, 638], [1280, 598], [1280, 218]],
-      "adjacent": ["engines"]
+      "polygon": [
+        [
+          1435,
+          472
+        ],
+        [
+          1700,
+          472
+        ],
+        [
+          1700,
+          648
+        ],
+        [
+          1435,
+          648
+        ]
+      ],
+      "adjacent": [
+        "engines"
+      ]
     }
   ],
-
-  "_doors": "One entry per adjacent pair, positioned on the bulkhead gap visible in the plate. Crew walk through these rather than straight between room centres, which is what made movement read as an abacus.",
-
+  "_doors": "One entry per adjacent pair. Crew walk through these rather than straight between room centres.",
   "doors": [
-    { "between": ["medbay", "shields"], "at": [420, 416] },
-    { "between": ["shields", "weapons"], "at": [668, 402] },
-    { "between": ["weapons", "reactor"], "at": [975, 416] },
-    { "between": ["reactor", "engines"], "at": [1125, 410] },
-    { "between": ["engines", "cargo"], "at": [1268, 410] }
+    {
+      "between": [
+        "medbay",
+        "shields"
+      ],
+      "at": [
+        468,
+        340
+      ]
+    },
+    {
+      "between": [
+        "shields",
+        "weapons"
+      ],
+      "at": [
+        652,
+        300
+      ]
+    },
+    {
+      "between": [
+        "weapons",
+        "reactor"
+      ],
+      "at": [
+        782,
+        470
+      ]
+    },
+    {
+      "between": [
+        "reactor",
+        "engines"
+      ],
+      "at": [
+        1050,
+        600
+      ]
+    },
+    {
+      "between": [
+        "engines",
+        "cargo"
+      ],
+      "at": [
+        1428,
+        560
+      ]
+    }
   ]
 }

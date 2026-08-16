@@ -69,7 +69,7 @@ func _draw_hover() -> void:
 	if hover_crew != "":
 		for member: CrewMember in view.all_crew():
 			if member.id == hover_crew:
-				draw_arc(view.crew_position(member), 40.0, 0.0, TAU, 32, Color(COL_HOVER, 0.85), 3.0)
+				draw_arc(view.crew_position(member), 22.0, 0.0, TAU, 28, Color(COL_HOVER, 0.85), 2.0)
 				return
 		return
 	if hover_room == "":
@@ -120,18 +120,18 @@ func _draw_crew_state() -> void:
 		# the person — and now that the crew are recognisable people, a bar
 		# across the face is worse than useless.
 		if member.is_tied():
-			var a: Vector2 = at + Vector2(-32.0, 52.0)
-			var b: Vector2 = at + Vector2(32.0, 52.0)
-			draw_line(a, b, Color(0, 0, 0, 0.9), 11.0)
-			draw_line(a, b, COL_TIED, 5.0)
-			for tick: float in [-22.0, 0.0, 22.0]:
-				draw_line(at + Vector2(tick, 46.0), at + Vector2(tick, 58.0), COL_TIED, 3.0)
+			var a: Vector2 = at + Vector2(-17.0, 24.0)
+			var b: Vector2 = at + Vector2(17.0, 24.0)
+			draw_line(a, b, Color(0, 0, 0, 0.9), 6.0)
+			draw_line(a, b, COL_TIED, 3.0)
+			for tick: float in [-11.0, 0.0, 11.0]:
+				draw_line(at + Vector2(tick, 21.0), at + Vector2(tick, 28.0), COL_TIED, 2.0)
 
 		if scene.task == RescueScene.Task.FREEING and scene.task_target == member.id:
-			var w: float = 120.0
-			var bar: Rect2 = Rect2(at + Vector2(-w * 0.5, 108.0), Vector2(w, 11.0))
+			var w: float = 64.0
+			var bar: Rect2 = Rect2(at + Vector2(-w * 0.5, 54.0), Vector2(w, 6.0))
 			draw_rect(bar.grow(1.0), Color(0, 0, 0, 0.8))
-			draw_rect(Rect2(bar.position, Vector2(w * scene.task_progress(), 11.0)), COL_SELECT)
+			draw_rect(Rect2(bar.position, Vector2(w * scene.task_progress(), 6.0)), COL_SELECT)
 
 
 func _draw_label(member: CrewMember, at: Vector2) -> void:
@@ -143,11 +143,11 @@ func _draw_label(member: CrewMember, at: Vector2) -> void:
 	# Appending "TIED" here made the plates wide enough to run into each other,
 	# the bars are a shape and the log says it in words, so nothing is lost.
 
-	var width: float = _font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
-	var plate: Rect2 = Rect2(at + Vector2(-width * 0.5 - 9.0, 68.0), Vector2(width + 18.0, 33.0))
+	var width: float = _font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	var plate: Rect2 = Rect2(at + Vector2(-width * 0.5 - 5.0, 30.0), Vector2(width + 10.0, 19.0))
 	draw_rect(plate, COL_PLATE_BG)
 	draw_string(
-		_font, at + Vector2(-width * 0.5, 93.0), name,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 26, COL_TEXT
+		_font, at + Vector2(-width * 0.5, 44.0), name,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 15, COL_TEXT
 	)
 

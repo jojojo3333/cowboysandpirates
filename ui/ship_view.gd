@@ -29,14 +29,14 @@ const AMBIENT: Color = Color(0.82, 0.85, 0.92)
 const LIGHT_ENERGY: float = 0.85
 const LIGHT_WARM: Color = Color(1.0, 0.94, 0.84)
 const LIGHT_REACTOR: Color = Color(1.0, 0.68, 0.34)
-const CREW_HIT_RADIUS: float = 48.0
+const CREW_HIT_RADIUS: float = 26.0
 const CREW_TEX: int = 96
-const SLOT_SPREAD: float = 152.0
+const SLOT_SPREAD: float = 74.0
 
 # How far the ship may exceed the panel height before it is scaled back. The
 # plate carries empty space above and below the hull, so a little overflow costs
 # nothing visible and buys a much larger ship.
-const SLOT_ROW: float = 172.0
+const SLOT_ROW: float = 86.0
 const OVERFLOW: float = 1.30
 
 # Which render a standing crew member uses, and how the eight renders line up
@@ -50,6 +50,12 @@ const FACING_OFFSET: int = 2
 # point the simulation says they occupy, and markers drawn at that point land on
 # their heads.
 const CREW_ART_OFFSET: float = -9.0
+
+# Crew are drawn at half the render size. The sheets are 128 px cells, and the
+# compartments on this plate are 130-230 px across — a full-size figure filled
+# an entire room. Rendering large and scaling down keeps the sprites sharp if a
+# later plate has bigger rooms.
+const CREW_SCALE: float = 0.52
 
 var scene: RescueScene = null
 var layout: ShipLayout = null
@@ -376,6 +382,7 @@ const CLIP_FPS: Dictionary = {"walk": 11.0, "idle": 3.0, "die": 8.0}
 func _make_crew_sprite(_member: CrewMember) -> Sprite2D:
 	var sprite: Sprite2D = Sprite2D.new()
 	sprite.offset = Vector2(0.0, CREW_ART_OFFSET)
+	sprite.scale = Vector2(CREW_SCALE, CREW_SCALE)
 	_crew_layer.add_child(sprite)
 	return sprite
 
