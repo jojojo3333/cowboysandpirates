@@ -40,13 +40,15 @@ because collections drift.
 | `assets/ui/kenney_fantasy_borders/**` (140 files) | Kenney *Fantasy UI Borders* 1.0 | CC0 1.0 | 2026-08-16 | 9-slice panel and border frames, not yet wired up |
 | `tools/crew_src/*.glb` (12 files) | Kenney *Mini Characters* 1.0, GLB format | CC0 1.0 | 2026-08-15 | Render source, kept so the pipeline can be re-run |
 
-**Open question on the current plate — still open, and now about a second
-image.** The plate was replaced on 2026-08-16 with `playerwarship1.png`, again
-supplied by the project owner, again with no origin recorded. It has the same
-look of published RPG cartography rather than a generated image, and this
-repository is public and publishes to GitHub Pages, so if it came from a book, a
-marketplace or a VTT pack, the licence needs to permit redistribution. One line
-from the owner closes this — generated, bought, or found.
+**Origin of the plates — answered, 2026-08-16. Both are model-generated.** The
+question stood open through two plates: this repository is public and publishes
+to GitHub Pages, and both images have the look of published RPG cartography, so
+if either had come from a book, a marketplace or a VTT pack the licence would
+have had to permit redistribution. The project owner has confirmed both were
+generated. Nothing here is third-party artwork.
+
+Ask the same question of the next plate. It is cheap to answer at the moment an
+image arrives and expensive to reconstruct later.
 
 **It is under the resolution minimum.** The spec below asks for 2048 px on the
 long axis and this plate is 1797. Nothing is broken by that — the ship still

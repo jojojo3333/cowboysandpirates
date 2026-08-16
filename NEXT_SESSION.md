@@ -70,9 +70,9 @@ This is an owner decision, not an engineering one. Do not pick one unasked.
 
 ## Open questions for the owner
 
-- **Plate licence, still unanswered.** Two owner-supplied plates now, neither
-  with a recorded origin, in a public repository that publishes to GitHub Pages.
-  `ASSETS.md` has the detail. One line closes it: generated, bought, or found.
+- ~~Plate licence.~~ **Answered 2026-08-16: both plates are model-generated.**
+  Nothing in `assets/ship/` is third-party artwork. Ask the same question of the
+  next plate, at the moment it arrives.
 - **The magazine is a thirteenth room.** The brief asked for twelve. The plate
   has a fully walled compartment full of missile racks beside turret control,
   with its own doorway onto the corridor, so leaving it out would have left a
