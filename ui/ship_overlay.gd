@@ -115,13 +115,21 @@ func _draw_crew_state() -> void:
 
 		# A bound crew member gets a visible restraint, not only a duller
 		# colour — CLAUDE.md rule 8: nothing that matters is colour alone.
+		# Below the figure's feet, not across it. At y=0 this ran through the
+		# chest and read as part of the sprite rather than as something done to
+		# the person — and now that the crew are recognisable people, a bar
+		# across the face is worse than useless.
 		if member.is_tied():
-			draw_line(at + Vector2(-38.0, 0.0), at + Vector2(38.0, 0.0), Color(0, 0, 0, 0.85), 11.0)
-			draw_line(at + Vector2(-38.0, 0.0), at + Vector2(38.0, 0.0), COL_TIED, 6.0)
+			var a: Vector2 = at + Vector2(-32.0, 52.0)
+			var b: Vector2 = at + Vector2(32.0, 52.0)
+			draw_line(a, b, Color(0, 0, 0, 0.9), 11.0)
+			draw_line(a, b, COL_TIED, 5.0)
+			for tick: float in [-22.0, 0.0, 22.0]:
+				draw_line(at + Vector2(tick, 46.0), at + Vector2(tick, 58.0), COL_TIED, 3.0)
 
 		if scene.task == RescueScene.Task.FREEING and scene.task_target == member.id:
 			var w: float = 120.0
-			var bar: Rect2 = Rect2(at + Vector2(-w * 0.5, 96.0), Vector2(w, 11.0))
+			var bar: Rect2 = Rect2(at + Vector2(-w * 0.5, 108.0), Vector2(w, 11.0))
 			draw_rect(bar.grow(1.0), Color(0, 0, 0, 0.8))
 			draw_rect(Rect2(bar.position, Vector2(w * scene.task_progress(), 11.0)), COL_SELECT)
 
@@ -137,10 +145,10 @@ func _draw_label(member: CrewMember, at: Vector2) -> void:
 	# in words.
 
 	var width: float = _font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
-	var plate: Rect2 = Rect2(at + Vector2(-width * 0.5 - 9.0, 56.0), Vector2(width + 18.0, 33.0))
+	var plate: Rect2 = Rect2(at + Vector2(-width * 0.5 - 9.0, 68.0), Vector2(width + 18.0, 33.0))
 	draw_rect(plate, COL_PLATE_BG)
 	draw_string(
-		_font, at + Vector2(-width * 0.5, 81.0), name,
+		_font, at + Vector2(-width * 0.5, 93.0), name,
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 26, COL_TEXT
 	)
 

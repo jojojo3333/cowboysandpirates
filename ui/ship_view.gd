@@ -37,6 +37,18 @@ const SLOT_SPREAD: float = 152.0
 const SLOT_ROW: float = 172.0
 const OVERFLOW: float = 1.30
 
+# Which render a standing crew member uses, and how the eight renders line up
+# with screen angles. Both are tuned by looking at the result, which is the only
+# way to get them right.
+const FACING_IDLE: int = 0
+const FACING_OFFSET: int = 2
+
+# The renders sit low in their frame — the models occupy y 81..166 of 192, so
+# their centre is 27 px below the frame's. Without this the figures stand well
+# below the point the simulation says they are at, and every marker drawn at
+# that point lands on their heads.
+const CREW_ART_OFFSET: float = -27.0
+
 var scene: RescueScene = null
 var layout: ShipLayout = null
 
@@ -46,6 +58,8 @@ var _overlay: ShipOverlay = null
 var _crew_layer: Node2D = null
 var _lights: Dictionary = {}
 var _crew_sprites: Dictionary = {}
+var _crew_frames: Dictionary = {}
+var _crew_last: Dictionary = {}
 var _class_colours: Dictionary = {}
 var _clock: float = 0.0
 var _fit_scale: float = 1.0
@@ -309,85 +323,82 @@ func _sync_crew() -> void:
 		# driven by the same progress the simulation publishes, so it stops
 		# dead when the game is paused.
 		var walking: bool = member == scene.tock and _tock_in_transit()
+		var previous: Vector2 = _crew_last.get(member.id, at) as Vector2
+		_crew_last[member.id] = at
+
 		if walking:
-			sprite.position = at + Vector2(0.0, -2.0 * absf(sin(_clock * 11.0)))
-			sprite.rotation = sin(_clock * 11.0) * 0.09
+			# The bob is the whole walk animation. The models have no rig, so
+			# this stands in until an animated set exists — and it is driven by
+			# the clock, which stops when the simulation is paused.
+			sprite.position = at + Vector2(0.0, -3.0 * absf(sin(_clock * 9.0)))
+			sprite.rotation = sin(_clock * 9.0) * 0.05
+			sprite.texture = _crew_frame(member, _facing_for(at - previous))
 		else:
 			sprite.position = at
 			sprite.rotation = 0.0
+			sprite.texture = _crew_frame(member, FACING_IDLE)
 
-		# The suit colour is baked into the texture, so modulate is only used to
-		# knock a restrained crew member down — never to carry identity.
-		sprite.modulate = Color(0.62, 0.55, 0.55) if member.is_tied() else Color.WHITE
+		# The renders are near-neutral by design (tools/grim_sprites.py), so a
+		# class tint lands cleanly on them instead of turning the whole figure
+		# one flat colour the way it did on the drawn version.
+		var tint: Color = _class_colours.get(member.class_id, Color(0.80, 0.82, 0.86))
+		tint = Color(1.0, 1.0, 1.0).lerp(tint, 0.55)
+		if member.is_tied():
+			tint = tint.darkened(0.30)
+		sprite.modulate = tint
 
 
-# Placeholder crew art, generated once into a texture rather than drawn every
-# frame — so the compartment lights fall on the figures the same way they fall
-# on the hull. Swapping in a real sprite sheet is a change to this function and
-# nothing else.
+# Crew sprites come from tools/render_crew.gd, which renders the CC0 Kenney
+# Mini Characters through a SubViewport at eight facings. They are not drawn.
+#
+# This replaced a generated texture built from pixel loops — two ellipses and a
+# highlight — which produced what the project owner correctly called polished
+# dots. A person is not a shape derivable from two radii. ASSETS.md described
+# this pipeline before any of that was written; it simply was not run.
+const CREW_MODELS: Array[String] = [
+	"character-male-a", "character-female-b", "character-male-d",
+	"character-female-e", "character-male-c", "character-female-a",
+	"character-male-f", "character-female-c",
+]
+const TOCK_MODEL: String = "character-male-e"
+const FACINGS: int = 8
+
+
 func _make_crew_sprite(member: CrewMember) -> Sprite2D:
 	var sprite: Sprite2D = Sprite2D.new()
-	var colour: Color = _class_colours.get(member.class_id, Color(0.72, 0.75, 0.80))
-	sprite.texture = _crew_texture(member.is_synthetic, colour)
+	sprite.offset = Vector2(0.0, CREW_ART_OFFSET)
 	_crew_layer.add_child(sprite)
 	return sprite
 
 
-func _crew_texture(synthetic: bool, suit: Color) -> Texture2D:
-	var s: int = CREW_TEX
-	var img: Image = Image.create(s, s, false, Image.FORMAT_RGBA8)
-	var mid: Vector2 = Vector2(float(s), float(s)) * 0.5
-	var unit: float = float(s) * 0.5
+func _crew_model(member: CrewMember) -> String:
+	if member.is_synthetic:
+		return TOCK_MODEL
+	var index: int = maxi(all_crew().find(member), 0)
+	return CREW_MODELS[index % CREW_MODELS.size()]
 
-	# A figure seen from directly above is shoulders with a head on top, not a
-	# disc. The first attempt was a disc with a stripe through it and read as a
-	# lozenge; this reads as a person at the size compartments actually give us.
-	for y: int in range(s):
-		for x: int in range(s):
-			var p: Vector2 = (Vector2(float(x) + 0.5, float(y) + 0.5) - mid) / unit
 
-			# Shoulders: an ellipse wider than it is deep.
-			var shoulder: float = (p.x / 0.96) * (p.x / 0.96) + (p.y / 0.74) * (p.y / 0.74)
-			if shoulder > 1.0:
-				continue
+func _crew_frame(member: CrewMember, facing: int) -> Texture2D:
+	var key: String = "%s_%d" % [_crew_model(member), facing]
+	if _crew_frames.has(key):
+		return _crew_frames[key] as Texture2D
+	var path: String = "res://assets/crew/%s.png" % key
+	var tex: Texture2D = load(path) as Texture2D
+	if tex == null:
+		push_error("crew sprite missing: %s — run tools/render_crew.gd" % path)
+	_crew_frames[key] = tex
+	return tex
 
-			var head: float = p.length() / 0.44
-			var colour: Color
-			if head <= 1.0:
-				# Helmet dome, lit from the top-left to match the room lights.
-				var lit: float = clampf(0.30 - (p.x * 0.15 + p.y * 0.18), 0.07, 0.36)
-				colour = Color(lit, lit, lit, 1.0)
-				# Specular pip, which is what sells a curved surface at 30 px.
-				if (p - Vector2(-0.15, -0.18)).length() < 0.11:
-					colour = Color(0.50, 0.52, 0.56, 1.0)
-			else:
-				# Suit: darker, and darker still toward the outside edge so the
-				# silhouette holds against a bright compartment floor.
-				# The class colour lives here and nowhere else. Modulating the
-				# whole sprite tinted the helmet too and turned every crew member
-				# back into the coloured disc this was meant to replace.
-				var falloff: float = clampf(1.05 - shoulder * 0.62, 0.30, 1.0)
-				colour = Color(
-					suit.r * 0.30 * falloff, suit.g * 0.30 * falloff, suit.b * 0.30 * falloff, 1.0
-				)
 
-			# Soft edge rather than a hard jagged one; these are scaled down a
-			# long way and aliasing on a 96 px source is very visible.
-			var edge: float = clampf((1.0 - shoulder) * 7.0, 0.0, 1.0)
-			colour.a = edge
-			img.set_pixel(x, y, colour)
-
-	# TOCK is a machine and must never be mistaken for crew: a hard rectangular
-	# sensor bar instead of a visor slit.
-	var bar_y0: int = int(float(s) * (0.40 if synthetic else 0.44))
-	var bar_y1: int = int(float(s) * (0.50 if synthetic else 0.48))
-	var bar_x0: int = int(float(s) * (0.33 if synthetic else 0.37))
-	var bar_x1: int = int(float(s) * (0.67 if synthetic else 0.63))
-	for y: int in range(bar_y0, bar_y1):
-		for x: int in range(bar_x0, bar_x1):
-			img.set_pixel(x, y, Color(0.06, 0.07, 0.09, 1.0))
-
-	return ImageTexture.create_from_image(img)
+# Which of the eight renders faces the way this crew member is going. Screen
+# angles run clockwise from east; the renders run anticlockwise from the model's
+# own forward, hence the negation and the offset.
+func _facing_for(direction: Vector2) -> int:
+	if direction.length_squared() < 0.01:
+		return FACING_IDLE
+	var angle: float = atan2(-direction.y, direction.x)
+	var step: int = int(round(angle / (TAU / float(FACINGS))))
+	return posmod(step + FACING_OFFSET, FACINGS)
 
 
 # The reactor breathes and the compartment lights flicker very slightly. Both
