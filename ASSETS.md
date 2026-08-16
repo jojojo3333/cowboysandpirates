@@ -36,9 +36,9 @@ because collections drift.
 |------|--------|---------|---------|----------|
 | `assets/ship/hull_plate.png` | Supplied by the project owner as `playerwarship1.png`. **Origin not stated.** 1797x875. | Owner-supplied | 2026-08-16 | The player ship: hull, compartments, corridors |
 | `assets/ship/hull_plate_normal.png` | Derived from the plate by `tools/make_normal_map.py` | follows the plate | 2026-08-16 | 2D lighting relief |
-| `assets/crew/*.png` (24 sheets) | Rendered by `tools/render_crew.gd` from Kenney *Mini Characters* 1.0 | CC0 1.0 | 2026-08-16 | Crew sprite sheets, 8 models x 3 clips |
+| `assets/crew/soldier_*.png` (3 sheets) | Baked by `tools/render_soldier.gd` from the Silver Soldier | follows the model | 2026-08-16 | Crew sprite sheets: walk, idle, die x 8 facings |
 | `assets/ui/kenney_fantasy_borders/**` (140 files) | Kenney *Fantasy UI Borders* 1.0 | CC0 1.0 | 2026-08-16 | 9-slice panel and border frames, not yet wired up |
-| `tools/crew_src/*.glb` (12 files) | Kenney *Mini Characters* 1.0, GLB format | CC0 1.0 | 2026-08-15 | Render source, kept so the pipeline can be re-run |
+| `tools/crew_src/silver_soldier_animated.glb` | Sketchfab *Silver Soldier (Animated)* by **Jungle Jim** | **CC-BY 4.0** | 2026-08-16 | The only crew model. Bake source, **excluded from the web export** |
 | `assets/crew_src_modular/*.fbx` (2 files) | OpenGameArt *Modular 3D male/female* by **wolkoed** | **CC-BY 4.0** | 2026-08-16 | Candidate crew bodies. **Not wired up** — see below |
 | `assets/crew_src_modular/Textures/*.png` (3 files) | same pack — armour albedo, metallic, normal | **CC-BY 4.0** | 2026-08-16 | Armour material. No body/skin texture ships with the pack |
 
@@ -70,11 +70,56 @@ ships those models must carry this, and so must any successor asset taken from
 Sketchfab or OpenGameArt under the same terms.
 
 ```
+Silver Soldier (Animated) — Jungle Jim (CC-BY 4.0)
+  https://sketchfab.com — supplied by the project owner
+
 Modular 3D male/female — wolkoed (CC-BY 4.0)
   base mesh: "Human basemeshes" — thehumbug (CC-BY 3.0)
   armour:    "Bandit armor and clothes" — wolkoed (CC-BY 4.0)
              "Fantasy scaled armor" — nordwar (CC-BY 4.0)
 ```
+
+## The Silver Soldier — what is in it, and what had to be authored
+
+**It is the crew, as of 2026-08-16.** The Kenney models and their 24 sheets are
+gone; every crew member including TOCK uses this one figure, separated by class
+colour. `assets/crew/` now holds three sheets totalling about 650 KB.
+
+**The rig is excellent. The animation is not a walk.** Both were measured rather
+than assumed:
+
+| | |
+|---|---|
+| Rig | 211 bones, Character Creator naming (`CC_Base_L_Thigh_00`, `CC_Base_R_Calf_024`) |
+| Triangles | 261,035 |
+| Animation | one clip, `FBXExportClip_0`, 12.72 s, 430 channels |
+
+The clip contains three bursts of motion — 0.3-2.1 s, 5.6-6.8 s and
+10.7-12.6 s — with long holds between them. The two thighs peak **0.08 s
+apart**; a walk alternates them by half a stride. Whole-body pose
+autocorrelation finds no repetition anywhere. He raises a rifle, aims it, and
+lowers it. **His feet never leave the floor.**
+
+So `tools/render_soldier.gd` authors the walk on his own skeleton: thigh swing,
+one-way knee bend, ankle counter-rotation, a small two-handed arm swing, torso
+roll and a bob twice per stride. The carry pose is sampled from his own clip so
+he keeps hold of the rifle. `die` is an authored collapse; `idle` is the carry
+pose with a breath on it.
+
+**The trap that cost the most time here:** Character Creator bones do not share
+an axis convention, so "rotate about local X" swings one leg forward and the
+other sideways. The renderer converts a known world axis into each bone's local
+frame instead — see `_swing()`.
+
+**Two numbers that decide how this is wired.** The baked sheet measures 0.068
+mean saturation, near-neutral, which is why a class tint lands as hue instead of
+mud. But mean brightness is 49, dark enough that a plain multiply tint only
+makes it darker — so `ui/ship_view.gd` lifts as well as tints
+(`CLASS_TINT_LIFT`).
+
+**The source is 42 MB and must never ship.** `export_presets.cfg` excludes
+`tools/crew_src/*`; the web build carries only the baked PNGs. Check that filter
+survives if the presets are ever regenerated.
 
 ## Crew models — what was measured, 2026-08-16
 

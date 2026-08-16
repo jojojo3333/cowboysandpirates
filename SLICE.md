@@ -151,6 +151,25 @@ this again.
 Turret control to the hold is one continuous 1034 px walk — 10.0 s — where the
 hop model charged 12 s for four hops.
 
+## Crew who walk — 2026-08-16
+
+The Kenney crew were replaced. Every crew member, TOCK included, is now the
+Silver Soldier, separated by class colour: amber commander, red soldier, green
+engineer, blue pilot, pink medic, cyan synthetic. Enemies will use the same
+figure in greys when there are enemies.
+
+**The model ships no walk cycle**, despite the filename. Measured in
+`ASSETS.md`: its one 12.72 s clip is a weapon-handling loop and the feet never
+move. What it does have is a clean 211-bone rig, so the walk is authored on it
+in `tools/render_soldier.gd` and baked to the same sheet format the game already
+read. No new runtime cost: three PNGs, about 650 KB.
+
+TOCK loses his robot chassis for now. That is the owner's call — an android who
+walks beats a robot who glides, and this is the only model in the project that
+can move.
+
+Reported, not tuned: **40.3s**, unchanged. Art does not touch the simulation.
+
 ## Still open
 
 Crew art is Kenney cartoon, not grimdark. TOCK is a human model with a cold

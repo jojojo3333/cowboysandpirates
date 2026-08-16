@@ -57,6 +57,12 @@ const CREW_ART_OFFSET: float = -9.0
 # later plate has bigger rooms.
 const CREW_SCALE: float = 0.52
 
+# How far a class colour pulls the figure away from neutral, and how much it
+# brightens it. Values above 1.0 in modulate brighten in Godot; without the lift
+# a tinted dark sprite reads as a darker dark sprite.
+const CLASS_TINT_STRENGTH: float = 0.72
+const CLASS_TINT_LIFT: float = 1.30
+
 var scene: RescueScene = null
 var layout: ShipLayout = null
 
@@ -341,33 +347,34 @@ func _sync_crew() -> void:
 
 		_apply_frame(sprite, member, clip, facing, step)
 
-		# The renders are near-neutral by design (tools/grim_sprites.py), so a
-		# class tint lands cleanly on them instead of turning the whole figure
-		# one flat colour the way it did on the drawn version.
+		# Everyone wears the same armour, so colour is the only thing telling one
+		# crew member from another. The sheet is near-neutral (measured: 0.07
+		# saturation) which is what makes a tint land as hue rather than mud —
+		# but it is also dark, mean brightness 49, and a plain multiply on a dark
+		# sprite only makes it darker. So the tint lifts as well as colours.
 		var tint: Color = _class_colours.get(member.class_id, Color(0.80, 0.82, 0.86))
-		tint = Color(1.0, 1.0, 1.0).lerp(tint, 0.55)
+		tint = Color(1.0, 1.0, 1.0).lerp(tint, CLASS_TINT_STRENGTH) * CLASS_TINT_LIFT
 		if member.is_tied():
-			tint = tint.darkened(0.30)
+			tint = tint.darkened(0.34)
 		sprite.modulate = tint
 
 
-# Crew sprites come from tools/render_crew.gd, which renders the CC0 Kenney
-# Mini Characters through a SubViewport. The models are rigged and ship with a
-# full animation set, so these are real walk cycles rather than a sine bob
-# applied to a static pose — which is what stood here before anyone checked
-# whether the models had animations. They did.
+# Crew sprites are baked by tools/render_soldier.gd from the Silver Soldier
+# model. One sheet per clip: columns are frames, rows are the eight facings.
 #
-# One sheet per model per clip: columns are frames, rows are the eight facings.
-const CREW_MODELS: Array[String] = [
-	"character-male-a", "character-female-b", "character-male-d",
-	"character-female-e", "character-male-c", "character-female-a",
-	"character-male-f",
-]
-const TOCK_MODEL: String = "character-male-e"
+# Everyone uses the same figure, including TOCK. That is deliberate for now —
+# the owner's call is that a robot who glides is worse than an android who
+# walks, and this is the only model in the project with a usable walk. TOCK gets
+# his own chassis once there is one that can move.
+#
+# The walk is authored on the model's own skeleton rather than taken from its
+# animation clip, which is a weapon-handling loop and not locomotion. See
+# tools/render_soldier.gd for the measurements behind that.
+const CREW_MODEL: String = "soldier"
+
+# Rows in every sheet. Read by _apply_frame and _facing_for.
 const FACINGS: int = 8
 
-# Must match tools/render_crew.gd CLIPS, or the sheet is sliced wrongly and
-# crew animate through their own neighbours' frames.
 const CLIP_FRAMES: Dictionary = {"walk": 8, "idle": 4, "die": 6}
 const CLIP_FPS: Dictionary = {"walk": 11.0, "idle": 3.0, "die": 8.0}
 
@@ -380,11 +387,8 @@ func _make_crew_sprite(_member: CrewMember) -> Sprite2D:
 	return sprite
 
 
-func _crew_model(member: CrewMember) -> String:
-	if member.is_synthetic:
-		return TOCK_MODEL
-	var index: int = maxi(all_crew().find(member), 0)
-	return CREW_MODELS[index % CREW_MODELS.size()]
+func _crew_model(_member: CrewMember) -> String:
+	return CREW_MODEL
 
 
 # Points the sprite at one cell of one sheet. hframes/vframes are set every
