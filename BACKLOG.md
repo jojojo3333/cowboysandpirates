@@ -108,6 +108,71 @@ spec". See **Brief D**.
 
 ---
 
+## Two ships on one screen — measured, 2026-08-16
+
+Slice 1 needs the player ship and an enemy ship side by side. **They fit, above
+1080p.** Run it and resize the window:
+
+```
+open tools/two_ship_test.tscn in Godot, press F6
+```
+
+Both ships draw from the same plate at one shared scale — two ships at different
+sizes would read as one being nearer the camera. Bands are reserved above and
+below for the UI that is not built yet, so the test answers "does it fit *with*
+the chrome", not "does it fit on a bare screen".
+
+| Window | Ship scale | Room | Crew figure | |
+|---|---|---|---|---|
+| 1280x720 | 0.35 | ~69 px | **~23 px** | tight |
+| 1600x900 | 0.44 | ~88 px | ~29 px | borderline |
+| 1920x1080 | 0.53 | ~105 px | ~35 px | fine |
+
+**Crew size is the constraint, not the ship.** Crew are the smallest thing a
+player must identify and click, and they run out of room long before the hull
+does. 35 px is what the current single-ship build draws them at, so 1080p with
+two ships is exactly as legible as today.
+
+**Two things worth knowing before designing the UI:**
+
+- **The plate has almost no wasted margin** — the hull fills 95% of the width
+  and 91% of the height. Cropping buys nothing. If two ships must fit at 720p,
+  the answer is a smaller plate or bigger crew, not a tighter crop.
+- **There is a lot of spare *vertical* room.** The plate is 2.05:1, so at 16:9
+  the layout is width-constrained: at 1080p each ship draws 948x461 inside a
+  band 872 tall. The UI can be generous top and bottom without shrinking the
+  ships at all. Horizontal space is the scarce thing; vertical is nearly free.
+
+## What to send someone working outside this repo
+
+**Send the whole repository.** It is small, it is public, and the parts that
+matter most are the documents. Sending a subset means the contributor cannot run
+`tools/verify.sh`, which is the one thing that tells them whether they are done.
+
+If a subset is genuinely necessary — a model with no repository access, say —
+then per track:
+
+**Track A (art and assets)** needs no code at all:
+- `BACKLOG.md` (Brief A and Brief D), `ASSETS.md`, `SETTING.md`
+- `tools/preview_models.gd` and `tools/render_crew.gd` — as the *contract*, so
+  they can see what the pipeline expects. Not to modify.
+- one existing crew sheet from `assets/crew/` as a reference for the output
+- for a ship plate: `assets/ship/hull_plate.png` as the reference to match
+
+**Track C (viewer)** needs the whole `ui/` layer and its inputs:
+- `CLAUDE.md`, `ARCHITECTURE.md`, `BACKLOG.md` (Brief C)
+- `main.gd`, `main.tscn`, `ui/*.gd`
+- `sim/*.gd` — **read-only**. The viewer calls into it constantly and cannot be
+  understood without it, but Track C must not change it.
+- `data/*.json`, and `assets/` so the thing actually renders
+- `tools/verify.sh`, `tools/validate_data.gd`, `tools/screenshot.gd`
+
+The one thing to say out loud in either brief, because it is not obvious from
+reading the files: **`sim/` and `ui/` are separate on purpose and the separation
+is load-bearing.** It is why the renderer could be rebuilt twice and the whole
+ship replaced without the simulation noticing. A contributor who "helpfully"
+reaches across it has broken something they cannot see.
+
 ## Outsourcing
 
 ### What actually separates cleanly

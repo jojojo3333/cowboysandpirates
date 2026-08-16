@@ -17,7 +17,17 @@ const WARN: Color = Color(0.90, 0.75, 0.35)
 const CRIT: Color = Color(0.92, 0.44, 0.38)
 const VOICE: Color = Color(0.55, 0.80, 0.85)
 
-const MAX_LOG_LINES: int = 120
+const MAX_LOG_LINES: int = 40
+
+# Event types the log panel does not print. The simulation still emits every one
+# of them and log_bus still carries them — CLAUDE.md's "if it matters, it writes
+# a log line" is about the event stream, and VOICE_AND_EVENTS §6 subscribes to
+# that same stream. This is a view filter and nothing more.
+#
+# Movement is the one thing the player can already see happening: the crew
+# member is visibly walking and the route is drawn ahead of them. A line saying
+# so is noise that pushes the lines that matter off the top.
+const LOG_HIDDEN: Array[String] = ["MOVE_ORDERED", "ARRIVED"]
 
 var scene: RescueScene = null
 
@@ -112,20 +122,30 @@ func _build_ui() -> void:
 
 	var ship_frame: PanelContainer = _make_panel(PANEL)
 	ship_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ship_frame.size_flags_stretch_ratio = 3.1
+	ship_frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	middle.add_child(ship_frame)
 
 	_ship = ShipView.new()
 	_ship.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_ship.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_ship.custom_minimum_size = Vector2(560, 320)
+	_ship.custom_minimum_size = Vector2(640, 300)
 	_ship.room_clicked.connect(_on_room_clicked)
 	_ship.crew_clicked.connect(_on_crew_clicked)
 	ship_frame.add_child(_ship)
 
-	middle.add_child(_build_log_panel())
+	# The log used to be a full-height column down the right-hand side. It cost
+	# a third of the width to text the player mostly does not read, and the
+	# ship is the thing worth looking at — more so now that a second ship has
+	# to fit beside it. It is a short strip along the bottom instead.
 
-	root.add_child(_build_voice_panel())
+	var bottom: HBoxContainer = HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 10)
+	root.add_child(bottom)
+
+	var voice: Control = _build_voice_panel()
+	voice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bottom.add_child(voice)
+	bottom.add_child(_build_log_panel())
 	root.add_child(_build_proposal_panel())
 	root.add_child(_build_ending_panel())
 
@@ -136,7 +156,10 @@ func _build_ui() -> void:
 func _build_log_panel() -> Control:
 	var panel: PanelContainer = _make_panel(PANEL)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.custom_minimum_size = Vector2(296, 0)
+	# Bottom-right, and deliberately small: a few recent lines, not a history.
+	# Sized to hold roughly five lines at 12 px.
+	panel.custom_minimum_size = Vector2(360, 96)
+	panel.size_flags_vertical = Control.SIZE_SHRINK_END
 
 	var box: VBoxContainer = VBoxContainer.new()
 	panel.add_child(box)
@@ -260,6 +283,9 @@ func _on_log_event(event: LogEvent) -> void:
 	if event.type == "TOCK_LINE":
 		_voice_label.text = "TOCK:  %s" % str(event.values.get("text", ""))
 		_append_log_line("        %s" % str(event.values.get("text", "")), VOICE)
+		return
+
+	if LOG_HIDDEN.has(event.type):
 		return
 
 	var colour: Color = TEXT
