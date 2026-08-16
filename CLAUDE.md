@@ -142,6 +142,7 @@ it passed.**
 
 | File | What it is |
 |------|------------|
+| `NEXT_SESSION.md` | What the next session does. Delete it once done. |
 | `SLICE.md` | Build order, current slice at the top, render passes below |
 | `GAME_SPEC.md` | Design spec, v0.1 and v0.2 in one file |
 | `ARCHITECTURE.md` | How `sim/` and `ui/` divide |
