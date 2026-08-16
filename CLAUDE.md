@@ -1,7 +1,8 @@
 # CLAUDE.md — working agreement
 
 Read this, then the top of `SLICE.md`, before doing anything. `BACKLOG.md`
-is the queue of everything known to be missing or wanted.
+is the queue of everything known to be missing or wanted — and it is the **only**
+file that holds one. Do not start a second.
 
 ## What this is
 
@@ -147,7 +148,6 @@ it passed.**
 | File | What it is |
 |------|------------|
 | `BACKLOG.md` | **What is next.** The one ordered queue, plus the briefs for work done outside this repo. |
-| `NEXT_SESSION.md` | What the next session does. Delete it once done. |
 | `SLICE.md` | Build order, current slice at the top, render passes below |
 | `GAME_SPEC.md` | Design spec, v0.1 and v0.2 in one file |
 | `ARCHITECTURE.md` | How `sim/` and `ui/` divide |

@@ -9,7 +9,6 @@ broken, and it doubles as the brief pack for work done outside this repo.
 | Question | File |
 |---|---|
 | **What is next?** | **this file** |
-| What is the immediate next session doing? | `NEXT_SESSION.md` |
 | What is the build order, and what is done? | `SLICE.md` |
 | What are the rules of the game? | `GAME_SPEC.md` |
 | How do `sim/` and `ui/` divide? | `ARCHITECTURE.md` |
@@ -17,9 +16,19 @@ broken, and it doubles as the brief pack for work done outside this repo.
 | What is the world, who is in it? | `SETTING.md`, `world/` |
 | How is it written? | `VOICE_AND_EVENTS.md` |
 
-`SLICE.md` is the roadmap and stays authoritative for build order. This file is
-the working queue: it holds the things that do not belong to a numbered slice,
-plus the state of each slice that does.
+**There used to be three files talking about the future** — this one,
+`NEXT_SESSION.md`, and the open-questions section of whatever was edited last.
+That was two too many, so `NEXT_SESSION.md` is gone and everything it held is
+here. Now there is one rule:
+
+- **`BACKLOG.md` — what happens next.** Nothing else may hold a queue.
+- **`SLICE.md` — what the game is, in build order, and what is already done.**
+  It records history and the shape of the thing; it does not schedule work.
+- **`GAME_SPEC.md` — the rules**, including the lists of what must *not* be
+  built.
+
+If a future item ends up written anywhere else, move it here and leave nothing
+behind.
 
 ---
 
@@ -32,6 +41,38 @@ commands green, balance report **40.3s** for both plans.
 **Current slice: 1** — the boarders' ship attacks. Not started.
 
 ---
+
+## Things that have already cost time
+
+Carried forward so they are not rediscovered. Every one of these was paid for.
+
+- **Check what a model actually contains before writing code around it.** Three
+  separate crew packs were described as having animation. One had a rig and no
+  clips, one had neither, one had a 12.72 s clip that turns out to be a man
+  raising and lowering a rifle. `tools/preview_models.gd` answers this in one
+  command and `ASSETS.md` records what each pack really held.
+- **`CLIP_FRAMES` in `ui/ship_view.gd` must match `CLIPS` in
+  `tools/render_soldier.gd`**, or the sheets are sliced wrongly and crew animate
+  through their neighbours' frames.
+- **Tune art in the view the game actually uses.** The walk cycle was shaped
+  looking at it side-on at 18 degrees; the game sees crew from 62 degrees, where
+  a leg swing is heavily foreshortened. It looks wonky for exactly that reason.
+- **`set_anchors_preset()` sets the anchors and leaves the offsets alone.** A
+  Control can end up with anchors 0,0,1,1 and offsets 0,0,-1920,-1080, which is
+  a 0x0 node whose children collapse into the top-left corner. Use
+  `set_anchors_and_offsets_preset()`. This is the real mechanism behind the
+  "game runs but the screen is empty" warning in `CLAUDE.md`.
+- **A "bright pixels are bulkheads" mask reads the yellow corridor stripe as a
+  wall.** Exclude yellow before thresholding.
+- **Never conclude from a headless screenshot that something feels good.**
+  Colour and geometry are checkable; feel is not.
+- **Before saying something cannot be done, say what it would actually require
+  and check each requirement.** Four times in two days the answer was "that
+  needs a tool I do not have" when the real requirement was something plainly
+  doable — most expensively, "animation needs Mixamo", when the walk was 200
+  lines of bone rotation. The owner asking "are you sure?" is what broke each
+  one; that question is worth asking every time.
+- The owner is not a programmer. Explain in outcomes, not in diffs.
 
 ## What the balance number is, and is not
 
@@ -363,6 +404,90 @@ is public and publishes to GitHub Pages, so it matters, and it is far cheaper to
 answer when the image arrives than to reconstruct later.
 
 ---
+
+## Brief E — research, not building
+
+Three questions to send out. Research is the right job for a model that cannot
+run the code: it produces something usable even when it cannot test anything.
+The trap is vagueness, so each of these names its deliverable.
+
+**E1 — Can "does this look right" be machine-checked?** *(the most valuable of
+the three)*
+
+This is the project's real bottleneck. The simulation has an automatic answer to
+"did I break it" — `verify.sh` plus the balance canary — which is why it has
+survived two renderer rewrites untouched. Art and feel have no such signal, so
+every visual change needs a human to look, and that is where the last two days
+went.
+
+Wanted: how 2D games actually automate this. Golden-image comparison and its
+tolerance problem, perceptual diffs, silhouette and contrast metrics at target
+resolution, contact sheets for human review, animation smoothness measures.
+**Deliverable:** three techniques described in enough detail to implement in
+Godot 4, plus an honest section on what genuinely still needs eyes.
+
+**E2 — Walk cycles from a Character Creator rig, seen from steeply above.**
+
+We author a walk on the model's own bones and bake it to 8-direction sprites
+(`tools/render_soldier.gd`). It reads as wonky. The camera is 62 degrees above
+horizontal, which foreshortens leg swing badly.
+
+Wanted: what swing angles, knee timing and foot-plant handling read correctly at
+a steep overhead camera; whether feet should be pinned to the floor and how;
+how many frames a walk needs to read at ~35 px. **Deliverable:** concrete
+numbers we can put straight into the constants at the top of that file.
+
+**E3 — Godot 4 web export budgets.**
+
+We publish to GitHub Pages on every push. Nobody has measured what the build
+costs a player.
+
+Wanted: realistic download and load-time budgets for a Godot 4.7 web export,
+which texture compression settings matter, what actually dominates size, and
+the common mistakes that bloat a build. **Deliverable:** a target size, the
+settings to reach it, and how to measure the current build against it.
+
+**Not being outsourced: the tutorial.** That is a design question and it is the
+owner's. The angle is not "how do tutorials work" but **"what do people hate
+about tutorials"** — see below.
+
+## The tutorial — the shape it is taking
+
+Two missions, and the first one *is* the tutorial. No separate mode, no lesson.
+
+1. **Rescue your crew** — the cargo hold. Built and playable.
+2. **Repel the boarders** — the pirate ship that just took your crew has people
+   aboard your ship. Not built.
+
+Both must work before the run of five jumps exists.
+
+**This conflicts with the current build order and someone has to decide.**
+`SLICE.md` Slice 1 is ship-to-ship gunnery: two hulls, weapons charging,
+click an enemy room to target it. What is described above is **boarding
+combat** — enemies walking your corridors, your crew fighting them — and
+`GAME_SPEC v0.2 section 3` currently lists boarding as deferred, do-not-build.
+
+So one of three things has to happen, and it is an owner call:
+- the spec changes and boarding moves into v0.1, or
+- mission 2 becomes ship-to-ship after all, or
+- mission 2 is a cut-down boarding fight scoped tightly enough not to be the
+  full v0.2 mechanic.
+
+Whichever way it goes, **item 1 in this queue blocks it**: you cannot defend a
+ship when only TOCK can be given an order.
+
+**On tutorials people hate.** Worth stating the design position rather than
+researching it:
+
+- Being told what is already on screen.
+- Modal boxes that stop play to explain play.
+- One permitted solution, enforced, before you may continue.
+- Walls of text before any input.
+- **And for a roguelike specifically: a tutorial you replay.** This is the big
+  one. Players will restart constantly, and anything unskippable becomes poison
+  by the fourth run. "The tutorial is mission 1" solves that — but only if
+  mission 1 is still worth playing on the twentieth run. That is the bar it has
+  to clear, and it is a higher bar than "teaches the controls".
 
 ## How to hand a task out
 
