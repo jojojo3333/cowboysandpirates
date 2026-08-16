@@ -5,8 +5,8 @@
   "plate": "res://assets/ship/hull_plate.png",
   "plate_normal": "res://assets/ship/hull_plate_normal.png",
   "plate_size": [
-    1774,
-    887
+    1797,
+    875
   ],
   "rooms": [
     {
