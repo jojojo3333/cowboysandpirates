@@ -133,11 +133,20 @@ func _check_layout() -> Array:
 					% room.id
 				)
 
-	# Every connection needs a door, or crew walk through a bulkhead.
+	# Every connection needs a way to walk it: either an authored bulkhead door,
+	# or both compartments opening onto the corridor. Without one of those, crew
+	# walk through a wall.
+	#
+	# It also needs a distance, or travel is free and the ship's size stops
+	# mattering — which is the whole point of charging by distance.
 	for room: ShipRoom in layout.rooms:
 		for other_id: String in room.adjacent:
 			if layout.get_room(other_id) == null:
 				continue
+			var on_corridor: bool = (
+				layout.corridor_door(room.id) != Vector2.ZERO
+				and layout.corridor_door(other_id) != Vector2.ZERO
+			)
 			var found: bool = false
 			for d: Dictionary in layout.doors:
 				var pair: Array = d.get("between", []) as Array
@@ -147,9 +156,14 @@ func _check_layout() -> Array:
 				):
 					found = true
 					break
-			if not found:
-				warnings.append(
-					"ship_layout.json: no door authored between '%s' and '%s'"
+			if not found and not on_corridor:
+				errors.append(
+					"ship_layout.json: '%s' and '%s' are adjacent with no door and no corridor route"
+					% [room.id, other_id]
+				)
+			if layout.walk_distance(room.id, other_id) <= 0.0:
+				errors.append(
+					"ship_layout.json: no walk distance between '%s' and '%s'"
 					% [room.id, other_id]
 				)
 
@@ -284,7 +298,7 @@ func _check_scene(room_ids: Array, crew_ids: Array) -> void:
 
 	var timing: Dictionary = scene.get("timing", {}) as Dictionary
 	for key: String in [
-		"transit_seconds", "free_seconds", "hack_seconds",
+		"crew_walk_speed", "free_seconds", "hack_seconds",
 		"hack_stagger_seconds", "fight_seconds", "boarder_count",
 		"fight_damage_per_crew", "crew_max_hp",
 	]:

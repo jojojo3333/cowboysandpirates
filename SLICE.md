@@ -120,6 +120,37 @@ at [100 ×5] hack and [75 ×5] fight. The whole difference is one transit. On th
 old six-room plate turret control was three hops from the hold; on this one it
 is four. Nothing was retuned to hide that and nothing should be.
 
+## Travel costs distance — 2026-08-16
+
+Also not a render pass. The corridor work left two things wrong, both reported
+from play: crew ducked *into* every room on the way past, and a move next door
+cost the same three seconds as a move the length of the ship.
+
+Both came from the same cause — movement was modelled room-to-room. Adjacency is
+now what the ship actually is: **every compartment that opens onto the corridor
+is adjacent to every other**, because you never pass through a room to reach
+another one, you walk down the corridor. Life support is the single exception,
+opening only into the reactor.
+
+That alone would have made the ship meaningless, since every trip becomes one
+hop. So transit is no longer a flat fee: it is **distance divided by speed**,
+with the distance measured along the corridor polyline at trace time and stored
+in `ship_layout.json` as a plain number. `sim/` divides and never reads a
+coordinate, which is the rule that let the whole ship be replaced without the
+simulation noticing.
+
+**The speed was carried forward, not invented.** 103 px/s is the old six-room
+ship's average hop (309 px) at its authored 3.0 s. The pace the game had is the
+pace it still has; what changed is that the pace now applies to a distance.
+
+Travel now ranges from 4.4 s across the corridor to 13.2 s bow to stern. Speed
+is read per crew member, so armour can slow someone down later without touching
+this again.
+
+**Reported, not tuned: 40.3s for both plans**, down from 42.4s, end HP unchanged.
+Turret control to the hold is one continuous 1034 px walk — 10.0 s — where the
+hop model charged 12 s for four hops.
+
 ## Still open
 
 Crew art is Kenney cartoon, not grimdark. TOCK is a human model with a cold

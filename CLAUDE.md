@@ -77,9 +77,10 @@ untyped code fails `verify static`.
 **`sim/` holds no Node or scene API.** Plain `RefCounted` classes over data.
 This is the reason the entire renderer could be thrown away and rebuilt twice
 without the simulation noticing, and why the balance report read 39.4s through
-every one of those rewrites. It is worth keeping for that alone. It reads 42.4s
-since 2026-08-16, when the ship itself was replaced — a new plate is a content
-change, not a render pass, and it is *supposed* to move the number.
+every one of those rewrites. It is worth keeping for that alone. It reads 40.3s
+since 2026-08-16, when the ship was replaced and travel started costing distance
+rather than a flat fee per room — both content changes, not render passes, and
+both *supposed* to move the number.
 
 **One seeded RNG** in `sim/rng.gd`. Global `randi()`/`randf()` make runs
 unreproducible, which breaks the balance harness.

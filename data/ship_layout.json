@@ -53,7 +53,16 @@
       ],
       "adjacent": [
         "airlock",
-        "greenhouse"
+        "cargo",
+        "engines",
+        "greenhouse",
+        "magazine",
+        "medbay",
+        "prison",
+        "quarters",
+        "reactor",
+        "shields",
+        "weapons"
       ]
     },
     {
@@ -81,9 +90,15 @@
       ],
       "adjacent": [
         "airlock",
+        "cargo",
+        "cockpit",
+        "engines",
         "greenhouse",
         "magazine",
+        "medbay",
         "prison",
+        "quarters",
+        "reactor",
         "shields"
       ]
     },
@@ -111,9 +126,15 @@
         ]
       ],
       "adjacent": [
+        "airlock",
+        "cargo",
+        "cockpit",
+        "engines",
+        "greenhouse",
         "medbay",
         "prison",
         "quarters",
+        "reactor",
         "shields",
         "weapons"
       ]
@@ -142,11 +163,17 @@
         ]
       ],
       "adjacent": [
+        "airlock",
+        "cargo",
+        "cockpit",
         "engines",
+        "greenhouse",
         "magazine",
         "medbay",
         "prison",
-        "reactor"
+        "reactor",
+        "shields",
+        "weapons"
       ]
     },
     {
@@ -182,7 +209,14 @@
       ],
       "adjacent": [
         "airlock",
+        "cargo",
         "cockpit",
+        "engines",
+        "magazine",
+        "medbay",
+        "prison",
+        "quarters",
+        "reactor",
         "shields",
         "weapons"
       ]
@@ -211,9 +245,17 @@
         ]
       ],
       "adjacent": [
+        "airlock",
+        "cargo",
+        "cockpit",
+        "greenhouse",
+        "magazine",
         "medbay",
+        "prison",
         "quarters",
-        "reactor"
+        "reactor",
+        "shields",
+        "weapons"
       ]
     },
     {
@@ -267,11 +309,18 @@
         ]
       ],
       "adjacent": [
+        "airlock",
         "cargo",
+        "cockpit",
         "engines",
+        "greenhouse",
         "lifesupport",
+        "magazine",
         "medbay",
-        "quarters"
+        "prison",
+        "quarters",
+        "shields",
+        "weapons"
       ]
     },
     {
@@ -298,7 +347,17 @@
         ]
       ],
       "adjacent": [
-        "reactor"
+        "airlock",
+        "cockpit",
+        "engines",
+        "greenhouse",
+        "magazine",
+        "medbay",
+        "prison",
+        "quarters",
+        "reactor",
+        "shields",
+        "weapons"
       ]
     },
     {
@@ -325,11 +384,17 @@
         ]
       ],
       "adjacent": [
+        "airlock",
+        "cargo",
+        "cockpit",
         "engines",
+        "greenhouse",
         "magazine",
         "prison",
         "quarters",
-        "reactor"
+        "reactor",
+        "shields",
+        "weapons"
       ]
     },
     {
@@ -356,9 +421,15 @@
         ]
       ],
       "adjacent": [
+        "airlock",
+        "cargo",
+        "cockpit",
+        "engines",
+        "greenhouse",
         "magazine",
         "medbay",
         "quarters",
+        "reactor",
         "shields",
         "weapons"
       ]
@@ -388,9 +459,15 @@
       ],
       "adjacent": [
         "airlock",
+        "cargo",
+        "cockpit",
+        "engines",
         "greenhouse",
         "magazine",
+        "medbay",
         "prison",
+        "quarters",
+        "reactor",
         "weapons"
       ]
     },
@@ -422,8 +499,15 @@
         ]
       ],
       "adjacent": [
+        "cargo",
         "cockpit",
+        "engines",
         "greenhouse",
+        "magazine",
+        "medbay",
+        "prison",
+        "quarters",
+        "reactor",
         "shields",
         "weapons"
       ]
@@ -628,118 +712,8 @@
       ]
     }
   ],
-  "_doors": "One entry per adjacent pair, kept for door_between(). Crew no longer walk straight through these \u2014 ui/ expands each hop into a corridor route \u2014 but the overlay and the fallback path still read them.",
+  "_doors": "Bulkhead doors that join two compartments directly, without going out into the corridor. There is exactly one on this ship. Every other connection is a corridor route built from room_doors and corridor_edges.",
   "doors": [
-    {
-      "between": [
-        "airlock",
-        "cockpit"
-      ],
-      "at": [
-        1448,
-        420
-      ]
-    },
-    {
-      "between": [
-        "airlock",
-        "greenhouse"
-      ],
-      "at": [
-        1398,
-        420
-      ]
-    },
-    {
-      "between": [
-        "airlock",
-        "shields"
-      ],
-      "at": [
-        1244,
-        420
-      ]
-    },
-    {
-      "between": [
-        "airlock",
-        "weapons"
-      ],
-      "at": [
-        1244,
-        420
-      ]
-    },
-    {
-      "between": [
-        "cargo",
-        "reactor"
-      ],
-      "at": [
-        519,
-        495
-      ]
-    },
-    {
-      "between": [
-        "cockpit",
-        "greenhouse"
-      ],
-      "at": [
-        1448,
-        420
-      ]
-    },
-    {
-      "between": [
-        "engines",
-        "medbay"
-      ],
-      "at": [
-        597,
-        335
-      ]
-    },
-    {
-      "between": [
-        "engines",
-        "quarters"
-      ],
-      "at": [
-        597,
-        335
-      ]
-    },
-    {
-      "between": [
-        "engines",
-        "reactor"
-      ],
-      "at": [
-        519,
-        343
-      ]
-    },
-    {
-      "between": [
-        "greenhouse",
-        "shields"
-      ],
-      "at": [
-        1244,
-        420
-      ]
-    },
-    {
-      "between": [
-        "greenhouse",
-        "weapons"
-      ],
-      "at": [
-        1244,
-        420
-      ]
-    },
     {
       "between": [
         "lifesupport",
@@ -749,136 +723,478 @@
         343,
         386
       ]
+    }
+  ],
+  "_walk_distances": "Length in plate pixels of the walk between two adjacent compartments, measured along the corridor polyline and precomputed here. sim/ divides this by crew_walk_speed to get how long the trip takes, so travel costs distance rather than a flat fee per hop \u2014 and sim/ still never reads a coordinate.",
+  "walk_distances": [
+    {
+      "between": [
+        "airlock",
+        "cargo"
+      ],
+      "px": 1319.3
+    },
+    {
+      "between": [
+        "airlock",
+        "cockpit"
+      ],
+      "px": 298.6
+    },
+    {
+      "between": [
+        "airlock",
+        "engines"
+      ],
+      "px": 1339.4
+    },
+    {
+      "between": [
+        "airlock",
+        "greenhouse"
+      ],
+      "px": 239.5
+    },
+    {
+      "between": [
+        "airlock",
+        "magazine"
+      ],
+      "px": 824.1
+    },
+    {
+      "between": [
+        "airlock",
+        "medbay"
+      ],
+      "px": 989.5
+    },
+    {
+      "between": [
+        "airlock",
+        "prison"
+      ],
+      "px": 809.4
+    },
+    {
+      "between": [
+        "airlock",
+        "quarters"
+      ],
+      "px": 1006.5
+    },
+    {
+      "between": [
+        "airlock",
+        "reactor"
+      ],
+      "px": 1207.9
+    },
+    {
+      "between": [
+        "airlock",
+        "shields"
+      ],
+      "px": 574.5
+    },
+    {
+      "between": [
+        "airlock",
+        "weapons"
+      ],
+      "px": 589.2
+    },
+    {
+      "between": [
+        "cargo",
+        "cockpit"
+      ],
+      "px": 1356.9
+    },
+    {
+      "between": [
+        "cargo",
+        "engines"
+      ],
+      "px": 639.6
+    },
+    {
+      "between": [
+        "cargo",
+        "greenhouse"
+      ],
+      "px": 1297.7
+    },
+    {
+      "between": [
+        "cargo",
+        "magazine"
+      ],
+      "px": 798.3
+    },
+    {
+      "between": [
+        "cargo",
+        "medbay"
+      ],
+      "px": 603.7
+    },
+    {
+      "between": [
+        "cargo",
+        "prison"
+      ],
+      "px": 783.6
+    },
+    {
+      "between": [
+        "cargo",
+        "quarters"
+      ],
+      "px": 620.8
+    },
+    {
+      "between": [
+        "cargo",
+        "reactor"
+      ],
+      "px": 476.2
+    },
+    {
+      "between": [
+        "cargo",
+        "shields"
+      ],
+      "px": 1018.8
+    },
+    {
+      "between": [
+        "cargo",
+        "weapons"
+      ],
+      "px": 1033.5
+    },
+    {
+      "between": [
+        "cockpit",
+        "engines"
+      ],
+      "px": 1376.9
+    },
+    {
+      "between": [
+        "cockpit",
+        "greenhouse"
+      ],
+      "px": 277.0
+    },
+    {
+      "between": [
+        "cockpit",
+        "magazine"
+      ],
+      "px": 861.6
+    },
+    {
+      "between": [
+        "cockpit",
+        "medbay"
+      ],
+      "px": 1027.1
+    },
+    {
+      "between": [
+        "cockpit",
+        "prison"
+      ],
+      "px": 846.9
+    },
+    {
+      "between": [
+        "cockpit",
+        "quarters"
+      ],
+      "px": 1044.1
+    },
+    {
+      "between": [
+        "cockpit",
+        "reactor"
+      ],
+      "px": 1245.5
+    },
+    {
+      "between": [
+        "cockpit",
+        "shields"
+      ],
+      "px": 612.1
+    },
+    {
+      "between": [
+        "cockpit",
+        "weapons"
+      ],
+      "px": 626.8
+    },
+    {
+      "between": [
+        "engines",
+        "greenhouse"
+      ],
+      "px": 1317.8
+    },
+    {
+      "between": [
+        "engines",
+        "magazine"
+      ],
+      "px": 818.4
+    },
+    {
+      "between": [
+        "engines",
+        "medbay"
+      ],
+      "px": 623.8
+    },
+    {
+      "between": [
+        "engines",
+        "prison"
+      ],
+      "px": 803.6
+    },
+    {
+      "between": [
+        "engines",
+        "quarters"
+      ],
+      "px": 640.8
+    },
+    {
+      "between": [
+        "engines",
+        "reactor"
+      ],
+      "px": 528.2
+    },
+    {
+      "between": [
+        "engines",
+        "shields"
+      ],
+      "px": 1038.8
+    },
+    {
+      "between": [
+        "engines",
+        "weapons"
+      ],
+      "px": 1053.5
+    },
+    {
+      "between": [
+        "greenhouse",
+        "magazine"
+      ],
+      "px": 802.5
+    },
+    {
+      "between": [
+        "greenhouse",
+        "medbay"
+      ],
+      "px": 967.9
+    },
+    {
+      "between": [
+        "greenhouse",
+        "prison"
+      ],
+      "px": 787.8
+    },
+    {
+      "between": [
+        "greenhouse",
+        "quarters"
+      ],
+      "px": 984.9
+    },
+    {
+      "between": [
+        "greenhouse",
+        "reactor"
+      ],
+      "px": 1186.3
+    },
+    {
+      "between": [
+        "greenhouse",
+        "shields"
+      ],
+      "px": 552.9
+    },
+    {
+      "between": [
+        "greenhouse",
+        "weapons"
+      ],
+      "px": 567.7
+    },
+    {
+      "between": [
+        "lifesupport",
+        "reactor"
+      ],
+      "px": 109.2
     },
     {
       "between": [
         "magazine",
         "medbay"
       ],
-      "at": [
-        766,
-        420
-      ]
+      "px": 468.5
     },
     {
       "between": [
         "magazine",
         "prison"
       ],
-      "at": [
-        856,
-        420
-      ]
+      "px": 288.4
     },
     {
       "between": [
         "magazine",
         "quarters"
       ],
-      "at": [
-        766,
-        420
-      ]
+      "px": 485.5
+    },
+    {
+      "between": [
+        "magazine",
+        "reactor"
+      ],
+      "px": 686.9
     },
     {
       "between": [
         "magazine",
         "shields"
       ],
-      "at": [
-        973,
-        420
-      ]
+      "px": 523.5
     },
     {
       "between": [
         "magazine",
         "weapons"
       ],
-      "at": [
-        973,
-        420
-      ]
+      "px": 538.2
     },
     {
       "between": [
         "medbay",
         "prison"
       ],
-      "at": [
-        766,
-        420
-      ]
+      "px": 453.8
     },
     {
       "between": [
         "medbay",
         "quarters"
       ],
-      "at": [
-        676,
-        420
-      ]
+      "px": 290.9
     },
     {
       "between": [
         "medbay",
         "reactor"
       ],
-      "at": [
-        597,
-        428
-      ]
+      "px": 492.3
+    },
+    {
+      "between": [
+        "medbay",
+        "shields"
+      ],
+      "px": 688.9
+    },
+    {
+      "between": [
+        "medbay",
+        "weapons"
+      ],
+      "px": 703.7
     },
     {
       "between": [
         "prison",
         "quarters"
       ],
-      "at": [
-        766,
-        420
-      ]
+      "px": 470.8
+    },
+    {
+      "between": [
+        "prison",
+        "reactor"
+      ],
+      "px": 672.2
     },
     {
       "between": [
         "prison",
         "shields"
       ],
-      "at": [
-        973,
-        420
-      ]
+      "px": 508.8
     },
     {
       "between": [
         "prison",
         "weapons"
       ],
-      "at": [
-        973,
-        420
-      ]
+      "px": 523.5
     },
     {
       "between": [
         "quarters",
         "reactor"
       ],
-      "at": [
-        597,
-        428
-      ]
+      "px": 509.4
+    },
+    {
+      "between": [
+        "quarters",
+        "shields"
+      ],
+      "px": 706.0
+    },
+    {
+      "between": [
+        "quarters",
+        "weapons"
+      ],
+      "px": 720.7
+    },
+    {
+      "between": [
+        "reactor",
+        "shields"
+      ],
+      "px": 907.4
+    },
+    {
+      "between": [
+        "reactor",
+        "weapons"
+      ],
+      "px": 922.1
     },
     {
       "between": [
         "shields",
         "weapons"
       ],
-      "at": [
-        1091,
-        420
-      ]
+      "px": 288.7
     }
   ]
 }

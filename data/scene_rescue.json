@@ -12,7 +12,8 @@
 
   "timing": {
     "_comment": "[PLAY-GATED] every one of these. Build as written, report, do not tune.",
-    "transit_seconds": 3.0,
+    "_speed_note": "Travel costs distance divided by speed, not a flat fee per room. 103 px/s is the old six-room ship's average hop (309 px) at its authored 3.0 s, carried forward so the game's pace is preserved rather than reinvented.",
+    "crew_walk_speed": 103.0,
     "free_seconds": 6.0,
     "hack_seconds": 18.0,
     "hack_stagger_seconds": 4.0,

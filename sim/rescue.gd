@@ -30,6 +30,10 @@ var tock: CrewMember = null
 
 var task: int = Task.IDLE
 var task_remaining: float = 0.0
+
+# How long the task in progress takes in total. Transit is no longer a fixed
+# fee, so progress has to be measured against this rather than a constant.
+var task_total: float = 0.0
 var task_target: String = ""
 var route: Array[String] = []
 
@@ -143,10 +147,23 @@ func order_move(room_id: String) -> bool:
 	route = route_to
 	_emit("MOVE_ORDERED", LogEvent.NEUTRAL, [tock.id], {
 		"to": room_id, "hops": route.size(),
+		"seconds": snappedf(_route_seconds(), 0.1),
 	})
 	if task != Task.TRANSIT:
 		_begin_hop()
 	return true
+
+
+# The whole ordered walk, so the log can say how long the trip will take rather
+# than how many rooms it passes. Hop count stopped being a useful number for the
+# player the moment travel started costing distance.
+func _route_seconds() -> float:
+	var total: float = 0.0
+	var at: String = tock.room
+	for room_id: String in route:
+		total += transit_seconds(at, room_id)
+		at = room_id
+	return total
 
 
 func _begin_hop() -> void:
@@ -162,7 +179,25 @@ func _begin_hop() -> void:
 		return
 	task = Task.TRANSIT
 	task_target = route[0]
-	task_remaining = float(_timing().get("transit_seconds", 3.0))
+	task_total = transit_seconds(tock.room, task_target)
+	task_remaining = task_total
+
+
+# How long it takes to walk from one compartment to the next. Distance divided
+# by speed, not a flat fee per hop: crossing the whole ship has to cost more
+# than stepping across the corridor, or the ship's layout means nothing and it
+# does not matter where anyone is standing.
+#
+# The distance comes precomputed from data/ship_layout.json, measured along the
+# corridor. sim/ never reads a coordinate — ARCHITECTURE.md.
+#
+# Speed is per crew member from here on, which is what lets armour slow someone
+# down later. Nobody has a modifier yet, so everyone walks at the scene's speed.
+func transit_seconds(from_id: String, to_id: String) -> float:
+	var speed: float = float(_timing().get("crew_walk_speed", 103.0))
+	if speed <= 0.0:
+		return 0.0
+	return layout.walk_distance(from_id, to_id) / speed
 
 
 # A compartment holds at most `capacity` bodies, friend or foe. TOCK is excluded
@@ -201,7 +236,8 @@ func order_free(crew_id: String) -> bool:
 		return false
 	task = Task.FREEING
 	task_target = crew_id
-	task_remaining = float(_timing().get("free_seconds", 6.0))
+	task_total = float(_timing().get("free_seconds", 6.0))
+	task_remaining = task_total
 	_emit("FREEING_STARTED", LogEvent.NEUTRAL, [crew_id], {})
 	return true
 
@@ -377,14 +413,9 @@ func crew_in_room(room_id: String) -> Array[CrewMember]:
 
 
 func task_progress() -> float:
-	if task == Task.IDLE:
-		return 0.0
-	var total: float = float(_timing().get("transit_seconds", 3.0))
-	if task == Task.FREEING:
-		total = float(_timing().get("free_seconds", 6.0))
-	if total <= 0.0:
-		return 1.0
-	return clampf(1.0 - (task_remaining / total), 0.0, 1.0)
+	if task == Task.IDLE or task_total <= 0.0:
+		return 0.0 if task == Task.IDLE else 1.0
+	return clampf(1.0 - (task_remaining / task_total), 0.0, 1.0)
 
 
 func ending_text() -> String:

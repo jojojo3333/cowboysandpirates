@@ -39,6 +39,8 @@ because collections drift.
 | `assets/crew/*.png` (24 sheets) | Rendered by `tools/render_crew.gd` from Kenney *Mini Characters* 1.0 | CC0 1.0 | 2026-08-16 | Crew sprite sheets, 8 models x 3 clips |
 | `assets/ui/kenney_fantasy_borders/**` (140 files) | Kenney *Fantasy UI Borders* 1.0 | CC0 1.0 | 2026-08-16 | 9-slice panel and border frames, not yet wired up |
 | `tools/crew_src/*.glb` (12 files) | Kenney *Mini Characters* 1.0, GLB format | CC0 1.0 | 2026-08-15 | Render source, kept so the pipeline can be re-run |
+| `assets/crew_src_modular/*.fbx` (2 files) | OpenGameArt *Modular 3D male/female* by **wolkoed** | **CC-BY 4.0** | 2026-08-16 | Candidate crew bodies. **Not wired up** — see below |
+| `assets/crew_src_modular/Textures/*.png` (3 files) | same pack — armour albedo, metallic, normal | **CC-BY 4.0** | 2026-08-16 | Armour material. No body/skin texture ships with the pack |
 
 **Origin of the plates — answered, 2026-08-16. Both are model-generated.** The
 question stood open through two plates: this repository is public and publishes
@@ -59,6 +61,62 @@ is worth asking for if one exists.
 Both plates so far were owner-supplied. The prompt kept below is the spec any
 commissioned replacement should be written against; the first plate was
 generated from it, describing shape language only and naming no property.
+
+## Attribution — required
+
+Everything above was CC0 until 2026-08-16. The modular crew bodies are **CC-BY**,
+which means credit is a licence condition rather than a courtesy. Any build that
+ships those models must carry this, and so must any successor asset taken from
+Sketchfab or OpenGameArt under the same terms.
+
+```
+Modular 3D male/female — wolkoed (CC-BY 4.0)
+  base mesh: "Human basemeshes" — thehumbug (CC-BY 3.0)
+  armour:    "Bandit armor and clothes" — wolkoed (CC-BY 4.0)
+             "Fantasy scaled armor" — nordwar (CC-BY 4.0)
+```
+
+## Crew models — what was measured, 2026-08-16
+
+Two candidate packs were assessed to replace the Kenney crew, which the owner
+finds too cartoonish. Both were judged on what the render pipeline actually
+needs, not on how they look in a product shot.
+
+**Rejected: "400 items + base human male/orc/skeleton" (Skyzor, CC-BY 4.0).**
+Not 3D — pre-rendered 2D sprites from *Siege of Avalon*, an isometric RPG. Eight
+directions and eight animations, which matches our sheet layout exactly, and
+none of that helps: **the camera angle is baked in**. Our crew are rendered
+looking down at 62 degrees to sit on a top-down ship; those sprites were shot
+from a much shallower isometric view and cannot be re-angled. The author also
+notes hard alpha edges, which fray when scaled to the ~66 px crew are drawn at.
+
+**Imported but not wired up: "Modular 3D male/female" (wolkoed, CC-BY 4.0).**
+Measured directly from the FBX rather than from the description:
+
+| | |
+|---|---|
+| Rig | **yes** — 54-bone humanoid, Mixamo bone names (`LeftUpLeg`, `RightToeBase`, `LeftHandThumb1`) |
+| Animation clips | **none.** Zero AnimationStack, AnimationLayer and AnimationCurve records |
+| Body texture | **none.** Only `Armor_d/m/n` ship; the pack says so |
+| Mesh parts | 12 each — body, three cut-down bodies for wearing armour over, four armours, two boots, two bracers, plus hair on the female |
+
+Two blockers, both needing something the pack does not contain. Rendered at the
+game's own camera (`tools/preview_models.gd`) they come out as **white
+untextured figures frozen in a T-pose**, and a T-pose seen from 62 degrees above
+is a starfish, not a person.
+
+**The finding that matters beyond this pack.** Side by side at true game scale,
+the realistic bodies read *worse* than the Kenney ones — thin, pale, and small
+in frame. Kenney's exaggerated proportions are not naivety, they are what makes
+a figure legible at 66 px from overhead. **"Less cartoonish" and "readable at
+crew size" pull against each other**, and the way to win both is bulk that is
+*earned*: armour, a pack, a helmet — a silhouette that is wide because the
+character is wearing something, not because the artist stretched it. That is the
+test any replacement should be held to.
+
+Because the rig is already Mixamo-named, Mixamo animations retarget onto it with
+no bone mapping at all. That is the cheapest route to making these usable, and
+it needs a browser upload, so it is the owner's step rather than an agent's.
 
 ## Ship plate spec — what the renderer needs from a ship image
 

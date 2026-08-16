@@ -22,6 +22,11 @@ var waypoints: Dictionary = {}          # id -> Vector2
 var corridor_edges: Array[Array] = []   # [[waypoint_id, waypoint_id], ...]
 var room_doors: Dictionary = {}         # room id -> {"waypoint": String, "at": Vector2}
 
+# How far apart two adjacent compartments are, in plate pixels, measured along
+# the corridor. Precomputed in the data so the simulation can charge travel by
+# distance without ever reading a coordinate.
+var walk_distances: Dictionary = {}     # "a|b" (sorted) -> float
+
 var _by_id: Dictionary = {}
 
 
@@ -75,6 +80,20 @@ func has_space(room_id: String, occupants: int) -> bool:
 	if room == null or room.capacity <= 0:
 		return true
 	return occupants < room.capacity
+
+
+# The length of the walk between two adjacent compartments. Falls back to the
+# straight line between their centres, so a layout with no authored distances
+# still moves crew rather than teleporting them.
+func walk_distance(a: String, b: String) -> float:
+	var key: String = ("%s|%s" % [a, b]) if a < b else ("%s|%s" % [b, a])
+	if walk_distances.has(key):
+		return float(walk_distances[key])
+	var ra: ShipRoom = get_room(a)
+	var rb: ShipRoom = get_room(b)
+	if ra == null or rb == null:
+		return 0.0
+	return ra.centre().distance_to(rb.centre())
 
 
 func are_adjacent(a: String, b: String) -> bool:

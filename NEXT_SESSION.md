@@ -14,12 +14,13 @@ walking through walls. Delete this file once the work in it is done.
 Slice 0 (the cargo hold rescue) plays start to finish on a new ship. The plate
 is the owner's `playerwarship1.png`, 1797x875, thirteen compartments traced off
 its bulkheads with a corridor graph traced off the yellow guidance stripe. Crew
-walk the corridors. Rooms have capacities and `sim/` enforces them.
+walk the corridors, take no detours through rooms they are only passing, and
+travel costs distance rather than a flat fee per room. Rooms have capacities and
+`sim/` enforces them.
 
-Both verify commands are green and the balance report reads **42.4s for both
-plans**, end HP [100 ×5] hack and [75 ×5] fight. It read 39.4s on the old plate;
-the difference is one transit, because turret control is now four hops from the
-hold instead of three. Nothing was retuned to hide that.
+Both verify commands are green and the balance report reads **40.3s for both
+plans**, end HP [100 x5] hack and [75 x5] fight. It read 39.4s on the old ship
+and 42.4s on this one before travel costed distance. Nothing was retuned.
 
 ```
 tools/verify.sh          # both; must be green before any commit
@@ -30,30 +31,25 @@ deploys on every push to `main` and to `claude/**`.
 
 ---
 
-## The thing worth deciding before building anything else
+## Where the crew art stands
 
-**Crew detour into every room on the route.** A hop is room-to-room, so walking
-from turret control to the hold takes TOCK *through* the magazine and *through*
-the medbay — in one door and out the other — rather than straight down the
-corridor past them. The log agrees with the picture ("TOCK IN MAGAZINE"), so it
-is consistent rather than broken, but on a ship with one long central corridor
-it reads as odd, and it did not on the old six-room plate where rooms genuinely
-joined each other.
+The Kenney crew are still live and still too cartoonish for the owner's taste.
+Two candidate replacements were measured and both fall short — `ASSETS.md` has
+the full assessment. The short version:
 
-Three ways out, in ascending order of cost:
+- The Skyzor sprite pack is **rejected outright**: pre-rendered at a fixed
+  isometric camera that cannot be re-angled to our 62-degree overhead view.
+- The wolkoed modular bodies are **in the repo but not wired up**. Rigged with a
+  Mixamo-named skeleton, but shipping **no animation clips and no body texture**.
+  As-is they render as white figures in a T-pose.
 
-1. **Leave it.** It is honest, it is consistent with the log, and the detours
-   are what make the ship feel big.
-2. **Make the corridor itself the graph** — every compartment adjacent to every
-   other, because that is physically true: you never pass through a room to get
-   anywhere. Costs the ship all of its travel structure; every move becomes one
-   transit, and the report drops to about 33.4s.
-3. **Charge transit by distance rather than per hop.** The corridor polyline
-   already knows how long each walk is. This is the version that makes the ship's
-   size mean something, and it is a real change to `sim/` and to
-   `scene_rescue.json`, so it wants its own slice and its own [PLAY-GATED] number.
-
-This is an owner decision, not an engineering one. Do not pick one unasked.
+**The lesson worth keeping:** at 66 px from overhead, the realistic bodies read
+*worse* than the cartoon ones — thin, pale, small. Kenney's exaggerated
+proportions are what make a figure legible at that size. Anything that replaces
+them needs bulk it has *earned* — armour, a pack, a helmet — not just realistic
+anatomy. Photograph any candidate with `tools/preview_models.gd` before
+committing to it; it uses the game's own camera and settles the question in one
+image.
 
 ## Carried forward, not done
 

@@ -75,6 +75,15 @@ static func load_layout() -> ShipLayout:
 				"at": Vector2(float(at[0]), float(at[1])),
 			}
 
+	for entry: Variant in raw.get("walk_distances", []):
+		var d: Dictionary = entry as Dictionary
+		var pair: Array = d.get("between", []) as Array
+		if pair.size() == 2:
+			var a: String = str(pair[0])
+			var b: String = str(pair[1])
+			var key: String = ("%s|%s" % [a, b]) if a < b else ("%s|%s" % [b, a])
+			layout.walk_distances[key] = float(d.get("px", 0.0))
+
 	var doors: Array[Dictionary] = []
 	for entry: Variant in raw.get("doors", []):
 		var d: Dictionary = entry as Dictionary
