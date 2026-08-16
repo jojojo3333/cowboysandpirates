@@ -9,6 +9,10 @@ walking through walls. Delete this file once the work in it is done.
 
 `CLAUDE.md`, then the top of `SLICE.md`, then `ASSETS.md`.
 
+`BACKLOG.md` is the ordered queue of everything known to be missing or wanted,
+and holds the briefs for work being done outside this repo. This file is only
+the handover from the last session; the backlog is the standing list.
+
 ## Where the project actually is
 
 Slice 0 (the cargo hold rescue) plays start to finish on a new ship. The plate
@@ -50,6 +54,18 @@ them needs bulk it has *earned* — armour, a pack, a helmet — not just realis
 anatomy. Photograph any candidate with `tools/preview_models.gd` before
 committing to it; it uses the game's own camera and settles the question in one
 image.
+
+## Not built, and asked for explicitly: crew movement
+
+**Only TOCK can move.** `main.gd:_on_room_clicked` calls `order_move()`, which is
+hardcoded to `scene.tock`, and `_on_crew_clicked` calls `order_free()`, which only
+unties. There is no "selected crew member" concept anywhere in the project, so a
+crew member cut loose in the hold turns ACTIVE and then stands still for the rest
+of the game.
+
+The owner spotted this from play and asked for it to be recorded rather than
+built. It is item 1 in `BACKLOG.md` and it blocks the boarders, Slice 3 and any
+tutorial that asks the player to move a person.
 
 ## Carried forward, not done
 
