@@ -43,11 +43,11 @@ const OVERFLOW: float = 1.30
 const FACING_IDLE: int = 0
 const FACING_OFFSET: int = 2
 
-# The renders sit low in their frame — the models occupy y 81..166 of 192, so
-# their centre is 27 px below the frame's. Without this the figures stand well
-# below the point the simulation says they are at, and every marker drawn at
-# that point lands on their heads.
-const CREW_ART_OFFSET: float = -27.0
+# The renders sit slightly low in their 128 px cell — the figures span y 32..114,
+# so their centre is 9 px below the cell's. Without this the crew stand below the
+# point the simulation says they occupy, and markers drawn at that point land on
+# their heads.
+const CREW_ART_OFFSET: float = -9.0
 
 var scene: RescueScene = null
 var layout: ShipLayout = null
@@ -62,6 +62,7 @@ var _crew_frames: Dictionary = {}
 var _crew_last: Dictionary = {}
 var _class_colours: Dictionary = {}
 var _clock: float = 0.0
+var _anim_clock: float = 0.0
 var _fit_scale: float = 1.0
 var _hover_room: String = ""
 var _hover_crew: String = ""
@@ -172,6 +173,11 @@ func _process(delta: float) -> void:
 		_build()
 
 	_clock += delta
+	# Crew animation runs on its own clock that stops with the simulation.
+	# _clock keeps going so the hover outline and the route dashes stay alive
+	# while paused; a crew member marching on the spot in a paused game does not.
+	if not scene.is_paused():
+		_anim_clock += delta
 	_fit()
 	_sync_crew()
 	_pulse_lights()
@@ -317,26 +323,22 @@ func _sync_crew() -> void:
 			_crew_sprites[member.id] = _make_crew_sprite(member)
 		var sprite: Sprite2D = _crew_sprites[member.id] as Sprite2D
 		var at: Vector2 = crew_position(member)
-
-		# A walk cycle stands in for animation frames until real crew art
-		# exists: a short bob and a lean in the direction of travel. It is
-		# driven by the same progress the simulation publishes, so it stops
-		# dead when the game is paused.
-		var walking: bool = member == scene.tock and _tock_in_transit()
 		var previous: Vector2 = _crew_last.get(member.id, at) as Vector2
 		_crew_last[member.id] = at
+		sprite.position = at
 
-		if walking:
-			# The bob is the whole walk animation. The models have no rig, so
-			# this stands in until an animated set exists — and it is driven by
-			# the clock, which stops when the simulation is paused.
-			sprite.position = at + Vector2(0.0, -3.0 * absf(sin(_clock * 9.0)))
-			sprite.rotation = sin(_clock * 9.0) * 0.05
-			sprite.texture = _crew_frame(member, _facing_for(at - previous))
-		else:
-			sprite.position = at
-			sprite.rotation = 0.0
-			sprite.texture = _crew_frame(member, FACING_IDLE)
+		var walking: bool = member == scene.tock and _tock_in_transit()
+		var clip: String = "walk" if walking else "idle"
+		var facing: int = _facing_for(at - previous) if walking else FACING_IDLE
+
+		# Restrained crew hold a single frame. An idle breathing loop on someone
+		# who is tied up reads as nobody being in any trouble.
+		var frames: int = int(CLIP_FRAMES.get(clip, 1))
+		var step: int = 0
+		if not member.is_tied():
+			step = int(_anim_clock * CLIP_FPS.get(clip, 6.0)) % frames
+
+		_apply_frame(sprite, member, clip, facing, step)
 
 		# The renders are near-neutral by design (tools/grim_sprites.py), so a
 		# class tint lands cleanly on them instead of turning the whole figure
@@ -349,22 +351,27 @@ func _sync_crew() -> void:
 
 
 # Crew sprites come from tools/render_crew.gd, which renders the CC0 Kenney
-# Mini Characters through a SubViewport at eight facings. They are not drawn.
+# Mini Characters through a SubViewport. The models are rigged and ship with a
+# full animation set, so these are real walk cycles rather than a sine bob
+# applied to a static pose — which is what stood here before anyone checked
+# whether the models had animations. They did.
 #
-# This replaced a generated texture built from pixel loops — two ellipses and a
-# highlight — which produced what the project owner correctly called polished
-# dots. A person is not a shape derivable from two radii. ASSETS.md described
-# this pipeline before any of that was written; it simply was not run.
+# One sheet per model per clip: columns are frames, rows are the eight facings.
 const CREW_MODELS: Array[String] = [
 	"character-male-a", "character-female-b", "character-male-d",
 	"character-female-e", "character-male-c", "character-female-a",
-	"character-male-f", "character-female-c",
+	"character-male-f",
 ]
 const TOCK_MODEL: String = "character-male-e"
 const FACINGS: int = 8
 
+# Must match tools/render_crew.gd CLIPS, or the sheet is sliced wrongly and
+# crew animate through their own neighbours' frames.
+const CLIP_FRAMES: Dictionary = {"walk": 8, "idle": 4, "die": 6}
+const CLIP_FPS: Dictionary = {"walk": 11.0, "idle": 3.0, "die": 8.0}
 
-func _make_crew_sprite(member: CrewMember) -> Sprite2D:
+
+func _make_crew_sprite(_member: CrewMember) -> Sprite2D:
 	var sprite: Sprite2D = Sprite2D.new()
 	sprite.offset = Vector2(0.0, CREW_ART_OFFSET)
 	_crew_layer.add_child(sprite)
@@ -378,14 +385,30 @@ func _crew_model(member: CrewMember) -> String:
 	return CREW_MODELS[index % CREW_MODELS.size()]
 
 
-func _crew_frame(member: CrewMember, facing: int) -> Texture2D:
-	var key: String = "%s_%d" % [_crew_model(member), facing]
+# Points the sprite at one cell of one sheet. hframes/vframes are set every
+# time because a crew member switching from idle to walk switches sheets, and
+# the two have different frame counts.
+func _apply_frame(
+	sprite: Sprite2D, member: CrewMember, clip: String, facing: int, step: int
+) -> void:
+	var sheet: Texture2D = _crew_sheet(_crew_model(member), clip)
+	if sheet == null:
+		return
+	var frames: int = int(CLIP_FRAMES.get(clip, 1))
+	sprite.texture = sheet
+	sprite.hframes = frames
+	sprite.vframes = FACINGS
+	sprite.frame = posmod(facing, FACINGS) * frames + posmod(step, frames)
+
+
+func _crew_sheet(model: String, clip: String) -> Texture2D:
+	var key: String = "%s_%s" % [model, clip]
 	if _crew_frames.has(key):
 		return _crew_frames[key] as Texture2D
 	var path: String = "res://assets/crew/%s.png" % key
 	var tex: Texture2D = load(path) as Texture2D
 	if tex == null:
-		push_error("crew sprite missing: %s — run tools/render_crew.gd" % path)
+		push_error("crew sheet missing: %s — run tools/render_crew.gd" % path)
 	_crew_frames[key] = tex
 	return tex
 
