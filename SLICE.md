@@ -8,14 +8,90 @@ became the first playable thing — what was slice 0 is now slice 1, and so on.
 Build only the current slice. When it runs and is committed, stop and wait.
 
 **One mission, not a chain.** The immediate target is a single combat that a
-human can play start to finish. The encounter chain — five in `GAME_SPEC_v0.1
-§5`, six in `GAME_SPEC_v0.2 §8` — is deferred, and its length is an open number
+human can play start to finish. The encounter chain — five in `GAME_SPEC v0.1
+§5`, six in `GAME_SPEC v0.2 §8` — is deferred, and its length is an open number
 to be decided after the single mission has been played. Both counts in the
 specs are superseded until then. Slice 4 stays written as-is because the jump
 screen and reward numbers are still what it needs to build; only the count is
 open.
 
 ---
+
+# Render passes — a separate track
+
+Presentation work does not belong in the slice sequence. Slices are missions and
+mechanics, numbered in build order; how the ship *looks* cuts across all of them
+and gets revisited many times, so it is numbered on its own track: **RENDER PASS
+1, 2, 3 …**, independent of `CURRENT SLICE`.
+
+Two numbering options were rejected. "Slice 1.5" implies it belongs between two
+mission slices and stops working the second time it happens — and it will happen
+often. "Slice 0" is taken by the cargo hold rescue, which is shipped, and reusing
+the number would make the build order ambiguous forever.
+
+The rules that hold for slices hold here too: the game must run and be clickable
+at the end of every pass, and `tools/verify.sh` must be green before it is
+committed.
+
+**A render pass may never change a simulation number.** If the balance report
+moves, something has leaked from `ui/` into `sim/` and the pass is wrong. The
+report is the check: it read 39.4s for both plans before RENDER PASS 1 and 39.4s
+after.
+
+## Where the ship art comes from — settled
+
+Checked, not assumed. **Void War** is Tundra, two people *plus a contract
+artist*. **FTL** ships are a hand-drawn `ship_base` PNG plus one authored PNG
+per interior room, positioned by a layout file. **Cosmoteer** assembles ships
+from hand-drawn 64×64 modules. In all three the art comes first and the data
+describes the art.
+
+We do the same: **one ship plate per ship** (`ASSETS.md` has the spec and the
+generation prompt), rooms traced from it as polygons in plate coordinates. Code
+draws state only.
+
+Drawing a hull from primitives has a ceiling, and it is not about polygon count
+— it is information. A painted hull carries thousands of individually decided
+pixels; procedural code derives detail from a handful of parameters, and rules
+produce regularity, which the eye reads as machine-made.
+
+## RENDER PASS 1 — "It looked like a text adventure"  ✅ DONE (superseded)
+
+Six flat grey rectangles in a value range 0.09–0.19 wide, called "an A4 sheet
+with a point on the front". Pass 1 built a drawn hull with chamfers, nacelles,
+lit interiors, thick walls and a starfield. All of it was deleted in pass 2 —
+kept here only because it is the evidence for the paragraph above.
+
+## RENDER PASS 2 — the plate is the ship  ✅ DONE
+
+- `assets/ship/hull_plate.png` replaces every drawn primitive. Rooms are traced
+  polygons, so an irregular compartment highlights along its own outline.
+- Grid `col`/`row` deleted. Adjacency is the chain the art shows. The simulation
+  only ever read `adjacent`, so this cost `sim/` nothing.
+- The engine got switched on: `CanvasTexture` with a derived normal map, one
+  `PointLight2D` per compartment, additive over a darkened plate. An unpowered
+  compartment can now simply go dark.
+- Hover feedback on compartments and crew, taken from the uploaded GRIMSHIP
+  prototype.
+
+## RENDER PASS 3 — crew are people  ✅ DONE
+
+- `tools/render_crew.gd` renders the CC0 Kenney Mini Characters through a
+  `SubViewport`. The models are **rigged** — `walk`, `idle`, `die`, and about
+  twenty more — so these are real animation cycles.
+- One sheet per model per clip: columns are frames, rows are eight facings.
+- Crew animation runs on a clock that stops with the simulation. Restrained crew
+  hold a single frame.
+- Before this, crew were generated from pixel loops — two ellipses and a
+  highlight. Three rounds of parameter tuning could not have fixed that.
+
+**Reported, not tuned:** the balance report has read 39.4s for both plans
+through all three passes, with end HP [100 ×5] hack and [75 ×5] fight.
+
+## Still open
+
+Crew art is Kenney cartoon, not grimdark. TOCK is a human model with a cold
+tint. There is no UI chrome, no fire, no damage, no enemy ship.
 
 ## Slice 0 — "The Cargo Hold"  ✅ DONE
 
@@ -86,7 +162,7 @@ and reach either end screen without touching the console.
 - Crew death at 0 HP. Permanent in v0.1. Must not crash.
 
 **Crew XP is not in this slice.** It was listed here originally, but
-`GAME_SPEC_v0.1` does not mention XP and `GAME_SPEC_v0.2 §5` introduces it as
+`GAME_SPEC v0.1` does not mention XP and `GAME_SPEC v0.2 §5` introduces it as
 new. XP is the first mechanic that makes a *specific* crew member
 irreplaceable, which is what v0.2 is for. v0.1's job is to prove the loop is
 fun with interchangeable crew.
@@ -119,3 +195,19 @@ Still to do, once combat exists:
 Clone Bay · boarding · equipment slots · commander abilities · Medbay ·
 branching sector map · fire · breaches · oxygen · shops · procedural events ·
 save/load · art · audio
+
+---
+
+## Rules for an agent running unattended
+
+_Folded in from `BUILD_PLAN.md`._
+
+1. **Commit at every green checkpoint** — one slice per commit, per `CLAUDE.md`.
+   An uncommitted context overflow loses hours.
+2. **Never weaken a test to make it pass.** Converting a failing assertion into a
+   skip, widening a tolerance, or deleting a case is the documented way these
+   runs go wrong. If a test is wrong, say so; do not silently adjust it.
+3. **Report `[PLAY-GATED]` numbers, never tune them.**
+4. **Stop at the slice boundary**, even with context left.
+5. **If the spec is ambiguous, stop and ask.** Do not invent a workaround for
+   something a human can settle in one sentence.

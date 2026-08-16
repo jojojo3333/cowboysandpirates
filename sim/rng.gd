@@ -1,7 +1,7 @@
 extends RefCounted
 class_name RunRng
 
-# The only randomness in the project. CLAUDE.md rule 6: global randi() / randf()
+# The only randomness in the project. Global randi() / randf()
 # are forbidden, because a run seed must reproduce a run exactly or the headless
 # harness cannot replay a failure.
 

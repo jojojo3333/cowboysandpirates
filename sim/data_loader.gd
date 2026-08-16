@@ -28,8 +28,11 @@ static func load_layout() -> ShipLayout:
 	if raw.is_empty():
 		return layout
 
-	layout.grid_columns = int(raw.get("grid_columns", 3))
-	layout.grid_rows = int(raw.get("grid_rows", 2))
+	layout.plate_path = str(raw.get("plate", ""))
+	layout.plate_normal_path = str(raw.get("plate_normal", ""))
+	var size_raw: Array = raw.get("plate_size", [1848, 855]) as Array
+	if size_raw.size() == 2:
+		layout.plate_size = Vector2(float(size_raw[0]), float(size_raw[1]))
 
 	for entry: Variant in raw.get("rooms", []):
 		var d: Dictionary = entry as Dictionary
@@ -37,13 +40,29 @@ static func load_layout() -> ShipLayout:
 		room.id = str(d.get("id", ""))
 		room.label = str(d.get("label", room.id.to_upper()))
 		room.system = str(d.get("system", ""))
-		room.col = int(d.get("col", 0))
-		room.row = int(d.get("row", 0))
+		var poly: PackedVector2Array = PackedVector2Array()
+		for point: Variant in d.get("polygon", []):
+			var pair: Array = point as Array
+			if pair.size() == 2:
+				poly.append(Vector2(float(pair[0]), float(pair[1])))
+		room.polygon = poly
 		var adj: Array[String] = []
 		for a: Variant in d.get("adjacent", []):
 			adj.append(str(a))
 		room.adjacent = adj
 		layout.add_room(room)
+
+	var doors: Array[Dictionary] = []
+	for entry: Variant in raw.get("doors", []):
+		var d: Dictionary = entry as Dictionary
+		var pair: Array = d.get("between", []) as Array
+		var at: Array = d.get("at", []) as Array
+		if pair.size() == 2 and at.size() == 2:
+			doors.append({
+				"between": [str(pair[0]), str(pair[1])],
+				"at": Vector2(float(at[0]), float(at[1])),
+			})
+	layout.doors = doors
 
 	return layout
 

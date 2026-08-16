@@ -1,64 +1,170 @@
 extends Control
 class_name ShipView
 
-# Top-down ship view: rooms as drawn rectangles at real pixel positions, crew
-# as markers that move between them. FTL's projection, which is flat overhead —
-# not isometric.
+# The ship view. The ship is a painted plate; this builds a small Node2D world
+# on top of it and lights it with the engine.
 #
-# Everything here is drawn in _draw(). No imported assets, no .tscn. The room
-# grid comes from data/ship_layout.json, so moving a room is a data change.
+# The ship is art: hull, compartment floors, bulkheads and doors come from
+# assets/ship/hull_plate.png. Nothing here draws them. What this file owns is
+# the scene graph — plate, lights, particles, crew sprites — plus hit-testing
+# and the mapping between plate pixels and screen pixels. Changing state is
+# drawn by ShipOverlay.
 #
-# This is a viewer. It holds no authoritative state: it reads the simulation
-# and turns clicks into signals that main.gd forwards back into it.
+# The plate is modulated down to near-darkness and the PointLight2Ds bring it
+# back. That is not decoration: an unpowered or wrecked compartment can simply
+# go dark, which is a state change the player reads instantly and which the log
+# also records in words.
+#
+# The node tree is built in code because it is generated from the room data,
+# not because scenes are off-limits. If a hand-authored scene is ever the
+# clearer way to express part of this, use one.
 
 signal room_clicked(room_id: String)
 signal crew_clicked(crew_id: String)
 
-const CELL_MIN: Vector2 = Vector2(150.0, 118.0)
-const CELL_MAX: Vector2 = Vector2(300.0, 230.0)
+# How dark the plate sits before any light touches it. Lights add on top, so
+# this is the "lights out" look of the ship.
+const AMBIENT: Color = Color(0.82, 0.85, 0.92)
 
-# Rooms tile flush against each other. They used to be separated by a gap, and
-# six free-floating rectangles read as six boxes rather than as one ship — the
-# first thing a human said after playing it.
-const GAP: float = 0.0
-const HULL_PAD: float = 15.0
-const PROW: float = 62.0
-const STERN: float = 30.0
-const DOOR: float = 0.34
-const CREW_RADIUS: float = 15.0
-const CREW_HIT_RADIUS: float = 20.0
-const SLOTS_PER_ROW: int = 3
+const LIGHT_ENERGY: float = 0.85
+const LIGHT_WARM: Color = Color(1.0, 0.94, 0.84)
+const LIGHT_REACTOR: Color = Color(1.0, 0.68, 0.34)
+const CREW_HIT_RADIUS: float = 26.0
+const CREW_TEX: int = 96
+const SLOT_SPREAD: float = 74.0
 
-const COL_HULL: Color = Color(0.09, 0.10, 0.13)
-const COL_ROOM: Color = Color(0.17, 0.19, 0.23)
-const COL_ROOM_EMPTY: Color = Color(0.14, 0.16, 0.19)
-const COL_EDGE: Color = Color(0.30, 0.34, 0.40)
-const COL_EDGE_REACHABLE: Color = Color(0.55, 0.78, 0.85)
-const COL_SHELL: Color = Color(0.115, 0.13, 0.155)
-const COL_DOOR: Color = Color(0.34, 0.46, 0.52)
-const COL_LABEL: Color = Color(0.58, 0.63, 0.69)
-const COL_TEXT: Color = Color(0.85, 0.88, 0.91)
-const COL_TIED: Color = Color(0.55, 0.35, 0.32)
-const COL_OUTLINE: Color = Color(0.05, 0.06, 0.08)
-const COL_PATH: Color = Color(0.45, 0.70, 0.78, 0.55)
+# How far the ship may exceed the panel height before it is scaled back. The
+# plate carries empty space above and below the hull, so a little overflow costs
+# nothing visible and buys a much larger ship.
+const SLOT_ROW: float = 86.0
+const OVERFLOW: float = 1.30
+
+# Which render a standing crew member uses, and how the eight renders line up
+# with screen angles. Both are tuned by looking at the result, which is the only
+# way to get them right.
+const FACING_IDLE: int = 0
+const FACING_OFFSET: int = 2
+
+# The renders sit slightly low in their 128 px cell — the figures span y 32..114,
+# so their centre is 9 px below the cell's. Without this the crew stand below the
+# point the simulation says they occupy, and markers drawn at that point land on
+# their heads.
+const CREW_ART_OFFSET: float = -9.0
+
+# Crew are drawn at half the render size. The sheets are 128 px cells, and the
+# compartments on this plate are 130-230 px across — a full-size figure filled
+# an entire room. Rendering large and scaling down keeps the sprites sharp if a
+# later plate has bigger rooms.
+const CREW_SCALE: float = 0.52
 
 var scene: RescueScene = null
 var layout: ShipLayout = null
 
+var _world: Node2D = null
+var _plate: Sprite2D = null
+var _overlay: ShipOverlay = null
+var _crew_layer: Node2D = null
+var _lights: Dictionary = {}
+var _crew_sprites: Dictionary = {}
+var _crew_frames: Dictionary = {}
+var _crew_last: Dictionary = {}
 var _class_colours: Dictionary = {}
-var _origin: Vector2 = Vector2.ZERO
-var _font: Font = null
+var _clock: float = 0.0
+var _anim_clock: float = 0.0
+var _fit_scale: float = 1.0
+var _hover_room: String = ""
+var _hover_crew: String = ""
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_font = ThemeDB.fallback_font
+	clip_contents = true
 	_load_class_colours()
 
 
-func _process(_delta: float) -> void:
-	# Positions animate every frame while TOCK is in transit.
-	queue_redraw()
+# main.gd assigns scene and layout after construction, so the world is built on
+# the first frame that has both rather than in _ready.
+func _build() -> void:
+	_world = Node2D.new()
+	add_child(_world)
+
+	_plate = Sprite2D.new()
+	_plate.centered = false
+	_plate.texture = _plate_texture()
+	_plate.modulate = AMBIENT
+	_world.add_child(_plate)
+
+	for room: ShipRoom in layout.rooms:
+		_add_room_light(room)
+
+	_crew_layer = Node2D.new()
+	_world.add_child(_crew_layer)
+
+	_overlay = ShipOverlay.new()
+	_overlay.scene = scene
+	_overlay.layout = layout
+	_overlay.view = self
+	_world.add_child(_overlay)
+
+
+# Diffuse and normal in one CanvasTexture. Without the normal map a PointLight2D
+# just brightens a region evenly, which looks like a torch shone at a
+# photograph; with it, the plating catches light edge-on and reads as relief.
+func _plate_texture() -> Texture2D:
+	var diffuse: Texture2D = load(layout.plate_path) as Texture2D
+	var normal: Texture2D = load(layout.plate_normal_path) as Texture2D
+	if diffuse == null:
+		push_error("ship plate missing: %s" % layout.plate_path)
+		return null
+	if normal == null:
+		return diffuse
+
+	var tex: CanvasTexture = CanvasTexture.new()
+	tex.diffuse_texture = diffuse
+	tex.normal_texture = normal
+	tex.specular_shininess = 0.35
+	return tex
+
+
+func _add_room_light(room: ShipRoom) -> void:
+	var light: PointLight2D = PointLight2D.new()
+	light.texture = _light_texture()
+	light.position = room.centre()
+	light.color = LIGHT_REACTOR if room.id == "reactor" else LIGHT_WARM
+	light.energy = LIGHT_ENERGY
+	light.blend_mode = Light2D.BLEND_MODE_ADD
+
+	# Sized to the compartment, so a long hold gets a long pool of light and a
+	# small one does not spill into its neighbours.
+	var extent: Rect2 = _polygon_bounds(room.polygon)
+	light.texture_scale = maxf(extent.size.x, extent.size.y) / 256.0 * 1.15
+	_world.add_child(light)
+	_lights[room.id] = light
+
+
+func _light_texture() -> Texture2D:
+	var grad: Gradient = Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 1))
+	grad.set_color(1, Color(1, 1, 1, 0))
+	grad.add_point(0.55, Color(1, 1, 1, 0.55))
+
+	var tex: GradientTexture2D = GradientTexture2D.new()
+	tex.gradient = grad
+	tex.width = 256
+	tex.height = 256
+	tex.fill = GradientTexture2D.FILL_RADIAL
+	tex.fill_from = Vector2(0.5, 0.5)
+	tex.fill_to = Vector2(1.0, 0.5)
+	return tex
+
+
+func _polygon_bounds(poly: PackedVector2Array) -> Rect2:
+	if poly.is_empty():
+		return Rect2()
+	var out: Rect2 = Rect2(poly[0], Vector2.ZERO)
+	for p: Vector2 in poly:
+		out = out.expand(p)
+	return out
 
 
 func _load_class_colours() -> void:
@@ -68,109 +174,62 @@ func _load_class_colours() -> void:
 		_class_colours[str(c.get("id", ""))] = Color(str(c.get("colour", "#b0b0b0")))
 
 
-# --- geometry --------------------------------------------------------------
+func _process(delta: float) -> void:
+	if scene == null or layout == null:
+		return
+	if _world == null:
+		_build()
 
-# Rooms grow to fill whatever space the window gives them, clamped so they
-# never get so small that six markers collide or so large that the ship stops
-# reading as one object.
-func _cell() -> Vector2:
-	var cols: float = float(maxi(layout.grid_columns, 1))
-	var rows: float = float(maxi(layout.grid_rows, 1))
-	# The prow and stern stick out past the room block, so they have to come off
-	# the budget before the rooms are sized — otherwise the hull is drawn
-	# outside the control and gets clipped.
-	var chrome: Vector2 = Vector2(
-		2.0 * HULL_PAD + PROW + STERN + 16.0,
-		2.0 * HULL_PAD + 16.0
-	)
-	var free: Vector2 = size - chrome - Vector2((cols - 1.0) * GAP, (rows - 1.0) * GAP)
-	return Vector2(
-		clampf(free.x / cols, CELL_MIN.x, CELL_MAX.x),
-		clampf(free.y / rows, CELL_MIN.y, CELL_MAX.y)
-	)
+	_clock += delta
+	# Crew animation runs on its own clock that stops with the simulation.
+	# _clock keeps going so the hover outline and the route dashes stay alive
+	# while paused; a crew member marching on the spot in a paused game does not.
+	if not scene.is_paused():
+		_anim_clock += delta
+	_fit()
+	_sync_crew()
+	_pulse_lights()
 
-
-func _hull_size() -> Vector2:
-	return _grid_size() + Vector2(2.0 * HULL_PAD + PROW + STERN, 2.0 * HULL_PAD)
+	_overlay.clock = _clock
+	_overlay.hover_room = _hover_room
+	_overlay.hover_crew = _hover_crew
+	_overlay.queue_redraw()
 
 
-func _grid_size() -> Vector2:
-	var cell: Vector2 = _cell()
-	var cols: float = float(maxi(layout.grid_columns, 1))
-	var rows: float = float(maxi(layout.grid_rows, 1))
-	return Vector2(
-		cols * cell.x + (cols - 1.0) * GAP,
-		rows * cell.y + (rows - 1.0) * GAP
-	)
+# --- layout ----------------------------------------------------------------
+
+# The whole ship scales to fit the panel. Everything downstream works in plate
+# pixels, so no other code has to know the window size.
+#
+# Width first, not the smaller of the two. The plate is 2.16:1 and the panel is
+# nearer 1.8:1, so fitting both axes letterboxed the ship into the middle third
+# of its own frame. Filling the width and letting the plate's own empty margin
+# crop off the top and bottom uses the space the ship is actually in. Overflow
+# is capped so a very short panel cannot swallow the hull.
+func _fit() -> void:
+	if size.x < 1.0 or size.y < 1.0:
+		return
+	var plate: Vector2 = layout.plate_size
+	var by_width: float = size.x / plate.x
+	var by_height: float = size.y / plate.y
+	_fit_scale = minf(by_width, by_height * OVERFLOW)
+	_world.scale = Vector2(_fit_scale, _fit_scale)
+	_world.position = ((size - plate * _fit_scale) * 0.5).floor()
 
 
-# Centres the hull, not the room block. The two differ by the prow, which is
-# only on one side, so centring the block put the nose off-screen.
-func _recentre() -> void:
-	var free: Vector2 = ((size - _hull_size()) * 0.5).maxf(0.0)
-	_origin = (free + Vector2(HULL_PAD + PROW, HULL_PAD)).floor()
+func to_plate(local: Vector2) -> Vector2:
+	if _fit_scale <= 0.0:
+		return Vector2.ZERO
+	return (local - _world.position) / _fit_scale
 
 
-func _room_rect(room: ShipRoom) -> Rect2:
-	var cell: Vector2 = _cell()
-	return Rect2(
-		_origin + Vector2(room.col * (cell.x + GAP), room.row * (cell.y + GAP)),
-		cell
-	)
+# --- crew ------------------------------------------------------------------
 
-
-func _room_centre(room_id: String) -> Vector2:
-	var room: ShipRoom = layout.get_room(room_id)
-	if room == null:
-		return _origin
-	return _room_rect(room).get_center()
-
-
-# Crew stand on a slot grid inside the room. Slots are derived from the room
-# rectangle rather than a fixed pixel step, so six markers in the hold spread
-# out instead of stacking on each other.
-func _slot(room_id: String, index: int, total: int) -> Vector2:
-	var room: ShipRoom = layout.get_room(room_id)
-	if room == null:
-		return _origin
-	var rect: Rect2 = _room_rect(room)
-	var inner: Rect2 = Rect2(
-		rect.position + Vector2(8.0, 30.0),
-		rect.size - Vector2(16.0, 42.0)
-	)
-	if total <= 1:
-		return inner.get_center()
-
-	var rows: int = maxi(int(ceil(float(total) / float(SLOTS_PER_ROW))), 1)
-	var col: int = index % SLOTS_PER_ROW
-	var row: int = index / SLOTS_PER_ROW
-	var in_row: int = mini(SLOTS_PER_ROW, total - row * SLOTS_PER_ROW)
-	var step_x: float = inner.size.x / float(SLOTS_PER_ROW)
-	var step_y: float = inner.size.y / float(rows)
-	return Vector2(
-		inner.get_center().x + (float(col) - (float(in_row) - 1.0) * 0.5) * step_x,
-		inner.position.y + step_y * (float(row) + 0.5)
-	)
-
-
-# Crew are called by one name in play, and a full name under a 30px disc is
-# what produced "SmithBraOstrTIED" on the first attempt.
-func _short_name(member: CrewMember) -> String:
-	var parts: PackedStringArray = member.display_name.split(" ", false)
-	return parts[parts.size() - 1] if parts.size() > 0 else member.display_name
-
-
-# The single source of truth for who stands where. Drawing, TOCK's position and
-# hit-testing all go through this. They used to compute it three separate ways,
-# which put TOCK on a slot nobody else agreed with and made clicks land beside
-# the markers rather than on them.
-func _occupants(room_id: String) -> Array[CrewMember]:
+func all_crew() -> Array[CrewMember]:
 	var out: Array[CrewMember] = []
 	for m: CrewMember in scene.crew:
-		if m.room == room_id:
-			out.append(m)
-	# A crew member in transit is on the corridor, not in either room.
-	if scene.tock != null and scene.tock.room == room_id and not _tock_in_transit():
+		out.append(m)
+	if scene.tock != null and not out.has(scene.tock):
 		out.append(scene.tock)
 	return out
 
@@ -179,221 +238,262 @@ func _tock_in_transit() -> bool:
 	return scene.task == RescueScene.Task.TRANSIT and scene.task_target != ""
 
 
-# TOCK sits on the line between the room he left and the one he is entering.
-# The simulation already models transit as a duration; this reads the progress
-# it publishes rather than inventing an animation of its own.
-func _tock_position() -> Vector2:
-	if _tock_in_transit():
-		return _room_centre(scene.tock.room).lerp(
-			_room_centre(scene.task_target), scene.task_progress()
-		)
-	var here: Array[CrewMember] = _occupants(scene.tock.room)
-	return _slot(scene.tock.room, maxi(here.find(scene.tock), 0), here.size())
+# The single source of truth for where a crew member stands. Drawing, the
+# sprites and hit-testing all read this, so a click can never land beside the
+# figure it looks like it is on.
+func crew_position(member: CrewMember) -> Vector2:
+	if member == scene.tock and _tock_in_transit():
+		return _walk_position()
+
+	var room: ShipRoom = layout.get_room(member.room)
+	if room == null:
+		return Vector2.ZERO
+
+	var here: Array[CrewMember] = _occupants(member.room)
+	var index: int = maxi(here.find(member), 0)
+	return _slot(room, index, here.size())
 
 
-# --- drawing ---------------------------------------------------------------
-
-func _draw() -> void:
-	if scene == null or layout == null or layout.rooms.is_empty():
-		return
-	_recentre()
-
-	draw_rect(Rect2(Vector2.ZERO, size), COL_HULL)
-
-	_draw_hull()
-	for room: ShipRoom in layout.rooms:
-		_draw_room(room)
-	_draw_walls()
-	if scene.task == RescueScene.Task.TRANSIT:
-		_draw_path()
-	_draw_crew()
+func _occupants(room_id: String) -> Array[CrewMember]:
+	var out: Array[CrewMember] = []
+	for m: CrewMember in all_crew():
+		if m.room == room_id and not (m == scene.tock and _tock_in_transit()):
+			out.append(m)
+	return out
 
 
-func _block() -> Rect2:
-	return Rect2(_origin, _grid_size())
+# Crew stand around the compartment centroid rather than on a fixed grid, so
+# five of them in a tapered hold spread out instead of stacking up.
+func _slot(room: ShipRoom, index: int, total: int) -> Vector2:
+	var centre: Vector2 = room.centre()
+	if total <= 1:
+		return centre
 
+	var bounds: Rect2 = _polygon_bounds(room.polygon)
+	var per_row: int = 3
+	var rows: int = maxi(int(ceil(float(total) / float(per_row))), 1)
+	var col: int = index % per_row
+	var row: int = index / per_row
+	var in_row: int = mini(per_row, total - row * per_row)
 
-# A silhouette around the whole room block, so the ship reads as one object with
-# an outside. Decoration only — nothing here is clickable and the simulation
-# knows nothing about it.
-func _draw_hull() -> void:
-	var b: Rect2 = _block()
-	var x0: float = b.position.x - HULL_PAD
-	var y0: float = b.position.y - HULL_PAD
-	var x1: float = b.end.x + HULL_PAD
-	var y1: float = b.end.y + HULL_PAD
-	var ym: float = b.get_center().y
-
-	var shell: PackedVector2Array = PackedVector2Array([
-		Vector2(x0 - PROW, ym),
-		Vector2(x0, y0),
-		Vector2(x1 - 34.0, y0),
-		Vector2(x1 + STERN, y0 + 26.0),
-		Vector2(x1 + STERN, y1 - 26.0),
-		Vector2(x1 - 34.0, y1),
-		Vector2(x0, y1),
-	])
-	draw_colored_polygon(shell, COL_SHELL)
-	draw_polyline(shell + PackedVector2Array([shell[0]]), COL_EDGE, 2.0)
-
-	# Engine bells, aft.
-	for offset: float in [-46.0, 10.0]:
-		draw_rect(Rect2(Vector2(x1 + STERN - 4.0, ym + offset), Vector2(16.0, 36.0)), COL_SHELL)
-		draw_rect(
-			Rect2(Vector2(x1 + STERN - 4.0, ym + offset), Vector2(16.0, 36.0)),
-			COL_EDGE, false, 2.0
-		)
-
-
-func _draw_room(room: ShipRoom) -> void:
-	var rect: Rect2 = _room_rect(room)
-	var fill: Color = COL_ROOM if room.system != "" else COL_ROOM_EMPTY
-	draw_rect(rect, fill, true)
-
-	if _is_target(room.id):
-		draw_rect(rect, COL_EDGE_REACHABLE * Color(1, 1, 1, 0.10), true)
-
-	draw_string(
-		_font, rect.position + Vector2(10.0, 20.0), room.label,
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 12, COL_LABEL
+	var step_x: float = minf(SLOT_SPREAD, bounds.size.x / float(per_row + 1))
+	# Rows need more room than columns: the name plate hangs below each figure
+	# and at column spacing the plates landed on the heads of the row beneath.
+	var step_y: float = minf(SLOT_ROW, bounds.size.y / float(rows + 1))
+	return centre + Vector2(
+		(float(col) - (float(in_row) - 1.0) * 0.5) * step_x,
+		(float(row) - (float(rows) - 1.0) * 0.5) * step_y
 	)
 
 
-func _is_target(room_id: String) -> bool:
-	return scene.task == RescueScene.Task.TRANSIT and not scene.route.is_empty() \
-		and scene.route[scene.route.size() - 1] == room_id
+# TOCK walks from where he is, through the doorway, to the next compartment —
+# not in a straight line between two room centres. The simulation already
+# models the hop as a duration; this reads the progress it publishes and spends
+# it along the real two-leg path.
+func _walk_position() -> Vector2:
+	var from_room: ShipRoom = layout.get_room(scene.tock.room)
+	var to_room: ShipRoom = layout.get_room(scene.task_target)
+	if from_room == null or to_room == null:
+		return Vector2.ZERO
+
+	var a: Vector2 = from_room.centre()
+	var door: Vector2 = layout.door_between(scene.tock.room, scene.task_target)
+	var b: Vector2 = to_room.centre()
+
+	var leg_a: float = a.distance_to(door)
+	var leg_b: float = door.distance_to(b)
+	var total: float = maxf(leg_a + leg_b, 0.001)
+	var travelled: float = total * scene.task_progress()
+
+	if travelled <= leg_a:
+		return a.lerp(door, travelled / maxf(leg_a, 0.001))
+	return door.lerp(b, (travelled - leg_a) / maxf(leg_b, 0.001))
 
 
-# Interior walls between grid neighbours, with a gap where the adjacency list
-# says there is a door. Where two rooms touch but are not adjacent, the wall is
-# solid — so the drawing and the rule the simulation uses cannot drift apart.
-func _draw_walls() -> void:
-	var cell: Vector2 = _cell()
-	for room: ShipRoom in layout.rooms:
-		var rect: Rect2 = _room_rect(room)
-		var right: ShipRoom = _room_at(room.col + 1, room.row)
-		if right != null:
-			_wall(
-				Vector2(rect.end.x, rect.position.y),
-				Vector2(rect.end.x, rect.end.y),
-				layout.are_adjacent(room.id, right.id)
-			)
-		var below: ShipRoom = _room_at(room.col, room.row + 1)
-		if below != null:
-			_wall(
-				Vector2(rect.position.x, rect.end.y),
-				Vector2(rect.end.x, rect.end.y),
-				layout.are_adjacent(room.id, below.id)
-			)
-	draw_rect(Rect2(_origin, _grid_size()), COL_EDGE, false, 2.0)
+# The ordered route as a polyline through every doorway still to be passed.
+func route_points() -> PackedVector2Array:
+	var out: PackedVector2Array = PackedVector2Array([crew_position(scene.tock)])
+	var previous: String = scene.tock.room
+	for room_id: String in scene.route:
+		var door: Vector2 = layout.door_between(previous, room_id)
+		if door != Vector2.ZERO:
+			out.append(door)
+		var room: ShipRoom = layout.get_room(room_id)
+		if room != null:
+			out.append(room.centre())
+		previous = room_id
+	return out
 
 
-func _room_at(col: int, row: int) -> ShipRoom:
-	for room: ShipRoom in layout.rooms:
-		if room.col == col and room.row == row:
-			return room
-	return null
+func _sync_crew() -> void:
+	for member: CrewMember in all_crew():
+		if not _crew_sprites.has(member.id):
+			_crew_sprites[member.id] = _make_crew_sprite(member)
+		var sprite: Sprite2D = _crew_sprites[member.id] as Sprite2D
+		var at: Vector2 = crew_position(member)
+		var previous: Vector2 = _crew_last.get(member.id, at) as Vector2
+		_crew_last[member.id] = at
+		sprite.position = at
+
+		var walking: bool = member == scene.tock and _tock_in_transit()
+		var clip: String = "walk" if walking else "idle"
+		var facing: int = _facing_for(at - previous) if walking else FACING_IDLE
+
+		# Restrained crew hold a single frame. An idle breathing loop on someone
+		# who is tied up reads as nobody being in any trouble.
+		var frames: int = int(CLIP_FRAMES.get(clip, 1))
+		var step: int = 0
+		if not member.is_tied():
+			step = int(_anim_clock * CLIP_FPS.get(clip, 6.0)) % frames
+
+		_apply_frame(sprite, member, clip, facing, step)
+
+		# The renders are near-neutral by design (tools/grim_sprites.py), so a
+		# class tint lands cleanly on them instead of turning the whole figure
+		# one flat colour the way it did on the drawn version.
+		var tint: Color = _class_colours.get(member.class_id, Color(0.80, 0.82, 0.86))
+		tint = Color(1.0, 1.0, 1.0).lerp(tint, 0.55)
+		if member.is_tied():
+			tint = tint.darkened(0.30)
+		sprite.modulate = tint
 
 
-func _wall(from: Vector2, to: Vector2, has_door: bool) -> void:
-	if not has_door:
-		draw_line(from, to, COL_EDGE, 2.0)
+# Crew sprites come from tools/render_crew.gd, which renders the CC0 Kenney
+# Mini Characters through a SubViewport. The models are rigged and ship with a
+# full animation set, so these are real walk cycles rather than a sine bob
+# applied to a static pose — which is what stood here before anyone checked
+# whether the models had animations. They did.
+#
+# One sheet per model per clip: columns are frames, rows are the eight facings.
+const CREW_MODELS: Array[String] = [
+	"character-male-a", "character-female-b", "character-male-d",
+	"character-female-e", "character-male-c", "character-female-a",
+	"character-male-f",
+]
+const TOCK_MODEL: String = "character-male-e"
+const FACINGS: int = 8
+
+# Must match tools/render_crew.gd CLIPS, or the sheet is sliced wrongly and
+# crew animate through their own neighbours' frames.
+const CLIP_FRAMES: Dictionary = {"walk": 8, "idle": 4, "die": 6}
+const CLIP_FPS: Dictionary = {"walk": 11.0, "idle": 3.0, "die": 8.0}
+
+
+func _make_crew_sprite(_member: CrewMember) -> Sprite2D:
+	var sprite: Sprite2D = Sprite2D.new()
+	sprite.offset = Vector2(0.0, CREW_ART_OFFSET)
+	sprite.scale = Vector2(CREW_SCALE, CREW_SCALE)
+	_crew_layer.add_child(sprite)
+	return sprite
+
+
+func _crew_model(member: CrewMember) -> String:
+	if member.is_synthetic:
+		return TOCK_MODEL
+	var index: int = maxi(all_crew().find(member), 0)
+	return CREW_MODELS[index % CREW_MODELS.size()]
+
+
+# Points the sprite at one cell of one sheet. hframes/vframes are set every
+# time because a crew member switching from idle to walk switches sheets, and
+# the two have different frame counts.
+func _apply_frame(
+	sprite: Sprite2D, member: CrewMember, clip: String, facing: int, step: int
+) -> void:
+	var sheet: Texture2D = _crew_sheet(_crew_model(member), clip)
+	if sheet == null:
 		return
-	var mid: Vector2 = (from + to) * 0.5
-	var half: Vector2 = (to - from) * (DOOR * 0.5)
-	draw_line(from, mid - half, COL_EDGE, 2.0)
-	draw_line(mid + half, to, COL_EDGE, 2.0)
-	draw_line(mid - half, mid + half, COL_DOOR, 3.0)
+	var frames: int = int(CLIP_FRAMES.get(clip, 1))
+	sprite.texture = sheet
+	sprite.hframes = frames
+	sprite.vframes = FACINGS
+	sprite.frame = posmod(facing, FACINGS) * frames + posmod(step, frames)
 
 
-func _draw_path() -> void:
-	var a: Vector2 = _room_centre(scene.tock.room)
-	var b: Vector2 = _room_centre(scene.task_target)
-	draw_line(a, b, COL_PATH, 3.0)
+func _crew_sheet(model: String, clip: String) -> Texture2D:
+	var key: String = "%s_%s" % [model, clip]
+	if _crew_frames.has(key):
+		return _crew_frames[key] as Texture2D
+	var path: String = "res://assets/crew/%s.png" % key
+	var tex: Texture2D = load(path) as Texture2D
+	if tex == null:
+		push_error("crew sheet missing: %s — run tools/render_crew.gd" % path)
+	_crew_frames[key] = tex
+	return tex
 
 
-func _draw_crew() -> void:
-	for room: ShipRoom in layout.rooms:
-		var here: Array[CrewMember] = _occupants(room.id)
-		for i: int in range(here.size()):
-			_draw_marker(here[i], _slot(room.id, i, here.size()), here[i] == scene.tock)
+# Which of the eight renders faces the way this crew member is going. Screen
+# angles run clockwise from east; the renders run anticlockwise from the model's
+# own forward, hence the negation and the offset.
+func _facing_for(direction: Vector2) -> int:
+	if direction.length_squared() < 0.01:
+		return FACING_IDLE
+	var angle: float = atan2(-direction.y, direction.x)
+	var step: int = int(round(angle / (TAU / float(FACINGS))))
+	return posmod(step + FACING_OFFSET, FACINGS)
 
-	# Drawn last and separately only while he is between rooms, where no room's
-	# slot grid applies.
-	if scene.tock != null and _tock_in_transit():
-		_draw_marker(scene.tock, _tock_position(), true)
 
-
-func _draw_marker(member: CrewMember, at: Vector2, is_tock: bool) -> void:
-	var colour: Color = _class_colours.get(member.class_id, Color(0.7, 0.7, 0.7))
-	if member.is_tied():
-		colour = colour.lerp(COL_TIED, 0.55)
-
-	draw_circle(at, CREW_RADIUS + 2.0, COL_OUTLINE)
-	draw_circle(at, CREW_RADIUS, colour)
-
-	# TOCK reads as machine: a square inside the disc rather than a face.
-	if is_tock:
-		var s: float = CREW_RADIUS * 0.52
-		draw_rect(Rect2(at - Vector2(s, s), Vector2(s, s) * 2.0), COL_OUTLINE, false, 2.0)
-	else:
-		draw_string(
-			_font, at + Vector2(-4.0, 5.0), member.display_name.substr(0, 1),
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 14, COL_OUTLINE
-		)
-
-	# A bound crew member gets a visible restraint, not only a duller colour —
-	# CLAUDE.md rule 8: nothing that matters is carried by colour alone.
-	if member.is_tied():
-		draw_line(
-			at + Vector2(-CREW_RADIUS, 0.0), at + Vector2(CREW_RADIUS, 0.0),
-			COL_OUTLINE, 3.0
-		)
-
-	var label: String = _short_name(member)
-	if member.hp < member.max_hp:
-		label += " %d" % member.hp
-	draw_string(
-		_font, at + Vector2(-40.0, CREW_RADIUS + 14.0), label,
-		HORIZONTAL_ALIGNMENT_CENTER, 80.0, 11, COL_TEXT
-	)
-	if member.is_tied():
-		draw_string(
-			_font, at + Vector2(-40.0, CREW_RADIUS + 26.0), "TIED",
-			HORIZONTAL_ALIGNMENT_CENTER, 80.0, 10, COL_TIED
-		)
-
-	if scene.task == RescueScene.Task.FREEING and scene.task_target == member.id:
-		var w: float = 44.0
-		var bar: Rect2 = Rect2(at + Vector2(-w * 0.5, CREW_RADIUS + 20.0), Vector2(w, 4.0))
-		draw_rect(bar, COL_OUTLINE)
-		draw_rect(
-			Rect2(bar.position, Vector2(w * scene.task_progress(), 4.0)),
-			COL_EDGE_REACHABLE
-		)
+# The reactor breathes and the compartment lights flicker very slightly. Both
+# are cosmetic and run off a clock that never reaches the simulation, so they
+# keep moving while paused without advancing anything that matters.
+func _pulse_lights() -> void:
+	for room_id: Variant in _lights.keys():
+		var light: PointLight2D = _lights[room_id] as PointLight2D
+		if str(room_id) == "reactor":
+			light.energy = LIGHT_ENERGY * (1.25 + 0.18 * sin(_clock * 1.9))
+		else:
+			light.energy = LIGHT_ENERGY * (1.0 + 0.02 * sin(_clock * 2.7 + float(light.position.x)))
 
 
 # --- input -----------------------------------------------------------------
 
 func _gui_input(event: InputEvent) -> void:
+	# Hover feedback. Without it nothing on the ship reacts until it is clicked,
+	# and a player cannot tell what is clickable from what is painted on.
+	var motion: InputEventMouseMotion = event as InputEventMouseMotion
+	if motion != null:
+		_update_hover(to_plate(motion.position))
+		return
+
 	var click: InputEventMouseButton = event as InputEventMouseButton
 	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
 		return
-	if scene == null or layout == null:
+	if scene == null or layout == null or _world == null:
 		return
 
-	# Crew are smaller and sit on top of rooms, so they are tested first, at the
-	# exact positions _draw_crew used.
-	for room: ShipRoom in layout.rooms:
-		var here: Array[CrewMember] = _occupants(room.id)
-		for i: int in range(here.size()):
-			if click.position.distance_to(_slot(room.id, i, here.size())) <= CREW_HIT_RADIUS:
-				crew_clicked.emit(here[i].id)
-				accept_event()
-				return
+	var at: Vector2 = to_plate(click.position)
+
+	# Crew are smaller and stand inside rooms, so they are tested first, at the
+	# exact positions the sprites were placed.
+	for member: CrewMember in all_crew():
+		if at.distance_to(crew_position(member)) <= CREW_HIT_RADIUS:
+			crew_clicked.emit(member.id)
+			accept_event()
+			return
 
 	for room: ShipRoom in layout.rooms:
-		if _room_rect(room).has_point(click.position):
+		if room.contains(at):
 			room_clicked.emit(room.id)
 			accept_event()
 			return
+
+
+func _update_hover(at: Vector2) -> void:
+	if scene == null or layout == null:
+		return
+	_hover_crew = ""
+	_hover_room = ""
+	for member: CrewMember in all_crew():
+		if at.distance_to(crew_position(member)) <= CREW_HIT_RADIUS:
+			_hover_crew = member.id
+			return
+	for room: ShipRoom in layout.rooms:
+		if room.contains(at):
+			_hover_room = room.id
+			return
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_MOUSE_EXIT:
+		_hover_room = ""
+		_hover_crew = ""

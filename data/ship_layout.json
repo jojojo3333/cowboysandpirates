@@ -1,59 +1,226 @@
 {
-  "_comment": "Room layout and adjacency. Grid coordinates are for the UI only; the simulation reads adjacency and nothing else. Ids must not change — scene scripts and save data key off them.",
-
-  "_grid": "2 rows x 3 columns.  weapons shields medbay  /  reactor engines cargo",
-
-  "grid_columns": 3,
-  "grid_rows": 2,
-
+  "_comment": "Room adjacency plus room shapes traced from the ship plate. The simulation reads adjacency and nothing else \u2014 polygons, doors and the plate are for the viewer. Ids must not change: scene scripts and save data key off them.",
+  "_plate": "Compartments are drawn by assets/ship/hull_plate.png. Nothing in ui/ draws hull, floors or bulkheads. Polygon and door coordinates are in plate pixels, so they are independent of window size.",
+  "_layout": "Six compartments picked off a much larger deck plan \u2014 the plate has roughly twenty. First pass, chosen to keep the chain medbay-shields-weapons-reactor-engines-cargo and therefore the 3-hop weapons-to-cargo route the rescue scene is balanced around. Cargo and engines are the two biggest because five crew plus their name plates need the room. Refining the outlines, or adding the wanted rooms (pilot deck, turret control, robot recharge, aqua-farming, O2), is a deliberate content change: it moves the balance numbers.",
+  "plate": "res://assets/ship/hull_plate.png",
+  "plate_normal": "res://assets/ship/hull_plate_normal.png",
+  "plate_size": [
+    1774,
+    887
+  ],
   "rooms": [
     {
-      "id": "weapons",
-      "label": "WEAPONS",
-      "system": "weapons",
-      "col": 0,
-      "row": 0,
-      "adjacent": ["shields", "reactor"]
+      "id": "medbay",
+      "label": "MEDBAY",
+      "system": "medbay",
+      "polygon": [
+        [
+          290,
+          330
+        ],
+        [
+          448,
+          330
+        ],
+        [
+          448,
+          438
+        ],
+        [
+          290,
+          438
+        ]
+      ],
+      "adjacent": [
+        "shields"
+      ]
     },
     {
       "id": "shields",
       "label": "SHIELDS",
       "system": "shields",
-      "col": 1,
-      "row": 0,
-      "adjacent": ["weapons", "medbay", "engines"]
+      "polygon": [
+        [
+          505,
+          248
+        ],
+        [
+          642,
+          248
+        ],
+        [
+          642,
+          358
+        ],
+        [
+          505,
+          358
+        ]
+      ],
+      "adjacent": [
+        "medbay",
+        "weapons"
+      ]
     },
     {
-      "id": "medbay",
-      "label": "MEDBAY",
-      "system": "medbay",
-      "col": 2,
-      "row": 0,
-      "adjacent": ["shields", "cargo"]
+      "id": "weapons",
+      "label": "WEAPONS",
+      "system": "weapons",
+      "polygon": [
+        [
+          665,
+          238
+        ],
+        [
+          898,
+          238
+        ],
+        [
+          898,
+          382
+        ],
+        [
+          665,
+          382
+        ]
+      ],
+      "adjacent": [
+        "shields",
+        "reactor"
+      ]
     },
     {
       "id": "reactor",
       "label": "REACTOR",
       "system": "",
-      "col": 0,
-      "row": 1,
-      "adjacent": ["weapons", "engines"]
+      "polygon": [
+        [
+          668,
+          552
+        ],
+        [
+          898,
+          552
+        ],
+        [
+          898,
+          718
+        ],
+        [
+          668,
+          718
+        ]
+      ],
+      "adjacent": [
+        "weapons",
+        "engines"
+      ]
     },
     {
       "id": "engines",
       "label": "ENGINES",
       "system": "engines",
-      "col": 1,
-      "row": 1,
-      "adjacent": ["reactor", "shields", "cargo"]
+      "polygon": [
+        [
+          1192,
+          486
+        ],
+        [
+          1420,
+          486
+        ],
+        [
+          1420,
+          642
+        ],
+        [
+          1192,
+          642
+        ]
+      ],
+      "adjacent": [
+        "reactor",
+        "cargo"
+      ]
     },
     {
       "id": "cargo",
       "label": "CARGO",
       "system": "",
-      "col": 2,
-      "row": 1,
-      "adjacent": ["medbay", "engines"]
+      "polygon": [
+        [
+          1435,
+          472
+        ],
+        [
+          1700,
+          472
+        ],
+        [
+          1700,
+          648
+        ],
+        [
+          1435,
+          648
+        ]
+      ],
+      "adjacent": [
+        "engines"
+      ]
+    }
+  ],
+  "_doors": "One entry per adjacent pair. Crew walk through these rather than straight between room centres.",
+  "doors": [
+    {
+      "between": [
+        "medbay",
+        "shields"
+      ],
+      "at": [
+        468,
+        340
+      ]
+    },
+    {
+      "between": [
+        "shields",
+        "weapons"
+      ],
+      "at": [
+        652,
+        300
+      ]
+    },
+    {
+      "between": [
+        "weapons",
+        "reactor"
+      ],
+      "at": [
+        782,
+        470
+      ]
+    },
+    {
+      "between": [
+        "reactor",
+        "engines"
+      ],
+      "at": [
+        1050,
+        600
+      ]
+    },
+    {
+      "between": [
+        "engines",
+        "cargo"
+      ],
+      "at": [
+        1428,
+        560
+      ]
     }
   ]
 }

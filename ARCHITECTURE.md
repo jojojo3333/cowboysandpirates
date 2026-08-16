@@ -20,10 +20,10 @@ you just cannot see it.
 
 Three concrete things depend on it, all of them already written into the specs:
 
-- **`GAME_SPEC_v0.2 §10.9`** requires 500 headless games with a balance report.
+- **`GAME_SPEC v0.2 §10.9`** requires 500 headless games with a balance report.
   That is impossible in any reasonable time if the simulation needs a scene tree
   and real-time timers.
-- **`GAME_SPEC_v0.2 §7a`** requires structured log events. The formatter lives in
+- **`GAME_SPEC v0.2 §7a`** requires structured log events. The formatter lives in
   `ui/` precisely because a second consumer arrives in v0.4.
 - **`VOICE_AND_EVENTS.md §6`** is that second consumer. TOCK's bark system
   subscribes to the same event stream. If `sim/` is entangled with `ui/`, adding
@@ -76,7 +76,7 @@ tools/
 ```
 
 **`tools/sim_runner.gd`, not `sim/sim_runner.gd`.** The path is fixed by
-`GAME_SPEC_v0.1` acceptance criterion 7, which spells the invocation out:
+`GAME_SPEC v0.1` acceptance criterion 7, which spells the invocation out:
 `godot --headless --script res://tools/sim_runner.gd -- --runs 200`.
 
 `ui/` filenames are indicative and may be reshaped. `sim/` and
@@ -85,7 +85,7 @@ tools/
 ### The one-scene rule
 
 `main.tscn` is the only scene file in the project. Every Control is constructed
-in GDScript at runtime. This is `CLAUDE.md` constraint 1 and it exists because
+in GDScript at runtime. Not a prohibition on scenes — it exists because
 hand-edited `.tscn` files are the thing an agent most reliably corrupts: they
 are line-oriented, position-sensitive, and a bad merge produces a project that
 opens to a blank screen with no error.

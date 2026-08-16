@@ -99,6 +99,11 @@ func _check_layout() -> Array:
 		errors.append("ship_layout.json: no rooms loaded")
 		return ids
 
+	if layout.plate_path == "" or not FileAccess.file_exists(layout.plate_path):
+		errors.append("ship_layout.json: plate '%s' does not exist" % layout.plate_path)
+	if layout.plate_normal_path != "" and not FileAccess.file_exists(layout.plate_normal_path):
+		errors.append("ship_layout.json: plate_normal '%s' does not exist" % layout.plate_normal_path)
+
 	for room: ShipRoom in layout.rooms:
 		if room.id == "":
 			errors.append("ship_layout.json: a room has no id")
@@ -107,6 +112,44 @@ func _check_layout() -> Array:
 		ids.append(room.id)
 		if room.adjacent.is_empty():
 			errors.append("ship_layout.json: room '%s' is isolated" % room.id)
+
+		# A room with no shape is invisible and unclickable, and the failure
+		# looks like a dead click rather than a crash.
+		if room.polygon.size() < 3:
+			errors.append("ship_layout.json: room '%s' has no polygon" % room.id)
+		else:
+			for p: Vector2 in room.polygon:
+				if p.x < 0.0 or p.y < 0.0 or p.x > layout.plate_size.x or p.y > layout.plate_size.y:
+					errors.append(
+						"ship_layout.json: room '%s' has a point outside the plate: %s"
+						% [room.id, str(p)]
+					)
+					break
+			if not Geometry2D.is_point_in_polygon(room.centre(), room.polygon):
+				errors.append(
+					"ship_layout.json: room '%s' centroid falls outside its own polygon"
+					% room.id
+				)
+
+	# Every connection needs a door, or crew walk through a bulkhead.
+	for room: ShipRoom in layout.rooms:
+		for other_id: String in room.adjacent:
+			if layout.get_room(other_id) == null:
+				continue
+			var found: bool = false
+			for d: Dictionary in layout.doors:
+				var pair: Array = d.get("between", []) as Array
+				if pair.size() == 2 and (
+					(pair[0] == room.id and pair[1] == other_id)
+					or (pair[0] == other_id and pair[1] == room.id)
+				):
+					found = true
+					break
+			if not found:
+				warnings.append(
+					"ship_layout.json: no door authored between '%s' and '%s'"
+					% [room.id, other_id]
+				)
 
 	# An asymmetric adjacency list produces a room fire can enter and not leave.
 	# That bug would only surface once v0.2 exists, which is exactly why it is

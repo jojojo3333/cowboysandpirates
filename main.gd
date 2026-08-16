@@ -1,7 +1,7 @@
 extends Control
 
 # The only script attached to the only scene. Every Control below is built in
-# GDScript at runtime — CLAUDE.md constraint 1. No .tscn is ever created or
+# GDScript at runtime, because the layout is generated from data. No .tscn is
 # hand-edited beyond main.tscn itself.
 #
 # This holds no authoritative state: everything it draws it reads from `scene`,
@@ -112,7 +112,7 @@ func _build_ui() -> void:
 
 	var ship_frame: PanelContainer = _make_panel(PANEL)
 	ship_frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ship_frame.size_flags_stretch_ratio = 2.2
+	ship_frame.size_flags_stretch_ratio = 3.1
 	middle.add_child(ship_frame)
 
 	_ship = ShipView.new()
@@ -136,7 +136,7 @@ func _build_ui() -> void:
 func _build_log_panel() -> Control:
 	var panel: PanelContainer = _make_panel(PANEL)
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.custom_minimum_size = Vector2(320, 0)
+	panel.custom_minimum_size = Vector2(296, 0)
 
 	var box: VBoxContainer = VBoxContainer.new()
 	panel.add_child(box)

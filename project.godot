@@ -1,9 +1,10 @@
-; Engine version is pinned in tools/setup_godot.sh. The original prototype
-; targeted 4.3; 4.7 is stricter about static typing, which CLAUDE.md requires
-; anyway, and is what the v0.3 agent tooling needs.
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
 ;
-; GL Compatibility renderer, because CI containers have no GPU and fall back to
-; software rasterisation. See CLAUDE.md.
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 

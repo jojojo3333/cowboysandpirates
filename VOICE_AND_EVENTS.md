@@ -231,7 +231,7 @@ Checklist, before any bulk generation:
 
 Only this. Nothing else in this document is built yet.
 
-The combat log in `GAME_SPEC_v0.2 §7a` must emit **structured events**, not
+The combat log in `GAME_SPEC v0.2 §7a` must emit **structured events**, not
 formatted strings:
 
 ```gdscript

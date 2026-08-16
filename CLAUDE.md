@@ -1,16 +1,40 @@
 # CLAUDE.md — working agreement
 
-Read this, then `GAME_SPEC_v0.1.md`, then the top of `SLICE.md`, before doing
-anything.
+Read this, then the top of `SLICE.md`, before doing anything.
 
 ## What this is
 
-A real-time-with-pause roguelike in the FTL lineage. Godot 4.7, GDScript.
+A real-time-with-pause roguelike in the Void War lineage. Godot 4.7, GDScript.
 Working title **Deadweight**. Setting is `SETTING.md`: Sol in 2100, a gold rush,
 no aliens and no FTL. You command a small ship and a crew, and the whole design
 goal is that losing one of them costs you something.
 
-Nothing is built yet. `SLICE.md` says **CURRENT SLICE: 0**.
+Slice 0 ships and three render passes are done. `SLICE.md` has the current
+slice at the top and the state of the art pipeline below it.
+
+### The visual reference is Void War, not FTL
+
+**Void War** (Tundra, two people plus a contract artist) is the look and tone we
+are aiming at: dark techno-gothic, low saturation, heavy hull detail. It is not
+"pretty" and players have complained it is hard to read because it is so
+monotone — both true, and still closer to what this project wants than FTL's
+bright primaries.
+
+"FTL" survives in these documents in four places only, where a verifiable fact
+about that specific game is being cited and swapping the name would make the
+sentence false:
+
+- `CLAUDE.md` above — **"no FTL" there means faster-than-light travel**, the
+  setting rule. It is not a reference to the game at all.
+- `VOICE_AND_EVENTS.md §1` — FTL's sales record is the evidence for the
+  no-plot argument. Void War is a 2024 indie and cannot carry that claim.
+- `GAME_SPEC v0.2 §1` — inside a quoted reviewer comparison *of* Void War *to*
+  FTL. Editing a quotation is not a rename.
+- `SETTING.md §4` — FTL's ship-unlock structure is the documented mechanic
+  being borrowed. Whether Void War unlocks ships the same way is unverified.
+
+Everywhere else — projection, room scale, silhouette, palette — the reference
+is Void War.
 
 ## Slice discipline — the most important rule
 
@@ -21,35 +45,49 @@ playable. A half-finished system that breaks the build is worse than no system.
 The current slice is at the top of `SLICE.md`. Build only that slice. Do not
 start the next one without being asked.
 
-## Hard constraints — violating these breaks the build
+## How this project is built
 
-1. **One scene only.** `main.tscn` holds a single `Control` node named `Main`
-   with `main.gd` attached. **Never create or hand-edit another `.tscn`.**
-   All UI nodes are constructed in GDScript at runtime.
-2. **No addons and no plugins.** For UI chrome — panels, buttons, the log —
-   `ColorRect`, `Label`, `Button`, `ProgressBar`, `VBoxContainer`,
-   `HBoxContainer`, `PanelContainer`, `GridContainer`, `MarginContainer`,
-   `ScrollContainer`. The ship itself is drawn: a `Control` with `_draw()`,
-   plus `Node2D`, `Polygon2D` and `Line2D` where they help.
+None of this is a prohibition. Earlier versions of this file carried a list of
+hard constraints — one scene only, never create a `.tscn`, no addons, the ship
+is drawn in `_draw()`. They cost the project two render passes and a rewrite,
+because they encoded a pipeline none of the reference games use, written before
+anyone had checked how those games are actually made. They are gone.
 
-   **Imported assets are allowed only under CC0, with documented provenance.**
-   Every imported file gets an entry in `ASSETS.md` naming its source, its
-   licence and the date it was fetched. No exceptions, including "just a
-   placeholder we will swap later" — placeholder art is how unlicensed art
-   ships. Assets extracted from another game are never acceptable regardless
-   of licence claims.
-3. **Static typing everywhere.** `var hull: int = 30`, `func fire() -> void:`.
-   Godot 4.7 treats several type-inference warnings as errors, so this is not a
-   style preference — untyped code fails `verify static`.
-4. **Simulation and UI stay separate.** Files under `sim/` must not reference
-   any Node, Control, or scene API — plain `RefCounted` classes over data.
-5. **All balance numbers live in `data/*.json`.** No hardcoded stats in code.
-6. **One RNG.** `sim/rng.gd` wraps a seeded `RandomNumberGenerator`.
-   Global `randi()` / `randf()` are forbidden.
-7. **No class logic in GDScript** (from v0.2). Classes live in
-   `data/classes.json`; adding a seventh must require editing JSON only.
-8. **No visual-only state changes** (from v0.2). If it matters, it writes a log
-   line. This outranks aesthetics permanently, including after the art pass.
+What is left is a short list of things that are true, with the reason attached.
+Where a reason stops applying, change the practice.
+
+**Use the whole engine.** `.tscn` scenes, the editor, `TileMap`, `PointLight2D`,
+`CanvasModulate`, normal maps, `GPUParticles2D`, `ShaderMaterial`,
+`AnimatedSprite2D`, `Tween`, addons, plugins — all available, all fair game. The
+project spent a long time calling `draw_rect` in a corner while the engine sat
+unused next to it. If Godot has a feature for the problem, use the feature.
+
+**The ship is art; code draws state.** Hull, compartment floors, bulkheads and
+doors come from a ship plate (`ASSETS.md`). Code draws what changes: selection,
+crew, doors, fire, breach, targeting, route, damage. The test — if it would look
+identical in a paused screenshot with nothing selected, it belongs in the plate.
+This is not a restriction, it is where the quality comes from: FTL and Void War
+both work this way, and drawing a hull from polygons has a ceiling that more
+polygons do not raise.
+
+**Static typing.** `var hull: int = 30`, `func fire() -> void:`. Not a style
+preference — Godot 4.7 treats several type-inference warnings as errors, so
+untyped code fails `verify static`.
+
+**`sim/` holds no Node or scene API.** Plain `RefCounted` classes over data.
+This is the reason the entire renderer could be thrown away and rebuilt twice
+without the simulation noticing, and why the balance report has read 39.4s
+through every one of those rewrites. It is worth keeping for that alone.
+
+**One seeded RNG** in `sim/rng.gd`. Global `randi()`/`randf()` make runs
+unreproducible, which breaks the balance harness.
+
+**Balance numbers live in `data/*.json`**, classes in `data/classes.json`.
+
+**If it matters, it writes a log line.** State the player needs must not be
+carried by colour or animation alone. This is the game's spine, not decoration:
+the log is what makes a real-time-with-pause game readable, and `VOICE_AND_EVENTS`
+§6 subscribes to the same stream.
 
 ## Godot 4 gotchas — these have cost real time before
 
@@ -87,7 +125,7 @@ tools/verify.sh sim        # headless test suite + balance report
 tools/verify.sh            # both
 ```
 
-These are the two commands `GAME_SPEC_v0.2 §10.1` requires to be green. Under
+These are the two commands `GAME_SPEC v0.2 §10.1` requires to be green. Under
 the hood `static` is the `godot --headless --quit` boot check plus the data
 contract validator; you do not need to run the raw command or read `run.log`
 yourself, because `verify.sh` greps for `SCRIPT ERROR` / `Parse Error` and fails
@@ -102,22 +140,24 @@ it passed.**
 
 ## Document map
 
-| File | Version | Status |
-|------|---------|--------|
-| `SLICE.md` | v0.1 | The build order. Current slice at the top. |
-| `GAME_SPEC_v0.1.md` | v0.1 | Authoritative. Nothing here is built yet. |
-| `GAME_SPEC_v0.2.md` | v0.2 | Authoritative for v0.2. Not started. |
-| `SETTING.md` | v0.3 | Written early so `data/` is regionally organised and §6 is settled. |
-| `VOICE_AND_EVENTS.md` | v0.4 | Written early. **Only §6 is built, and only in v0.2.** |
-| `ARCHITECTURE.md` | — | How `sim/` and `ui/` divide. Read before adding a file. |
-| `BUILD_PLAN.md` | — | Phases, and the v0.1 → v0.2 deltas that need decisions. |
+| File | What it is |
+|------|------------|
+| `SLICE.md` | Build order, current slice at the top, render passes below |
+| `GAME_SPEC.md` | Design spec, v0.1 and v0.2 in one file |
+| `ARCHITECTURE.md` | How `sim/` and `ui/` divide |
+| `ASSETS.md` | Every imported file, the ship plate spec, the render pipeline |
+| `SETTING.md` | Sol in 2100 — regions, factions, tone |
+| `VOICE_AND_EVENTS.md` | Writing and event structure. Only §6 is built. |
+| `world/` | **The owner's folder.** Storyboard, crew, missions, world. Prose in, JSON out — never the reverse without saying so. |
+| `assets/` | **The shared drop.** Art goes in, gets recorded in `ASSETS.md`, gets wired up. |
 
-Later-version documents are constraints on the future, not licences to build
-ahead. When two disagree about something already built, the lower version wins.
+`GAME_SPEC_v0.1.md`, `GAME_SPEC_v0.2.md` and `BUILD_PLAN.md` were merged away —
+they had grown overlapping goals, non-goals, determinism and acceptance
+sections that drifted apart.
 
 ## Scope discipline
 
-`GAME_SPEC_v0.1 §2` and `GAME_SPEC_v0.2 §3` are lists of things that must not be
+`GAME_SPEC v0.1 §2` and `GAME_SPEC v0.2 §3` are lists of things that must not be
 built. They are not advisory. From v0.2: the Soldier is deliberately the weakest
 class and the Medic is deliberately near-useless alongside a Clone Bay. **Both
 are correct. Do not invent compensating mechanics.**
