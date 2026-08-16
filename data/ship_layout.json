@@ -1,91 +1,245 @@
 {
-  "_comment": "Room adjacency plus room shapes traced from the ship plate. The simulation reads adjacency and nothing else \u2014 polygons, doors and the plate are for the viewer. Ids must not change: scene scripts and save data key off them.",
-  "_plate": "Compartments are drawn by assets/ship/hull_plate.png. Nothing in ui/ draws hull, floors or bulkheads. Polygon and door coordinates are in plate pixels, so they are independent of window size.",
-  "_layout": "Six compartments picked off a much larger deck plan \u2014 the plate has roughly twenty. First pass, chosen to keep the chain medbay-shields-weapons-reactor-engines-cargo and therefore the 3-hop weapons-to-cargo route the rescue scene is balanced around. Cargo and engines are the two biggest because five crew plus their name plates need the room. Refining the outlines, or adding the wanted rooms (pilot deck, turret control, robot recharge, aqua-farming, O2), is a deliberate content change: it moves the balance numbers.",
+  "_comment": "Rooms, corridors and adjacency traced from assets/ship/hull_plate.png. The simulation reads `adjacent` and `capacity` only \u2014 polygons, doors and the corridor graph are for the viewer. Ids must not change: scene scripts and save data key off them.",
+  "_plate": "Compartments are drawn by the plate. Nothing in ui/ draws hull, floors or bulkheads. Every coordinate here is in plate pixels, so all of it is independent of window size.",
+  "_layout": "Thirteen compartments, traced off the bulkhead bands in the art. Twelve are the rooms the owner specified; the thirteenth is the magazine, which is a fully walled compartment on the plate sitting beside turret control, so leaving it out would have left a visible room crew could never enter.",
+  "_corridors": "The plate paints a yellow guidance stripe down the centre of every corridor. `waypoints` are traced off that stripe at each junction, bend and doorway; `corridor_edges` join them; `room_doors` tap each compartment onto the graph. ui/ walks this polyline so crew stop cutting through bulkheads. Corridors that dead-end against the hull carry no waypoints \u2014 they are cosmetic.",
+  "_adjacency": "Derived from the corridor, not hand-listed: two rooms are adjacent when their doorways are consecutive taps on the graph. The simulation charges one transit per hop, so this is what movement costs.",
   "plate": "res://assets/ship/hull_plate.png",
   "plate_normal": "res://assets/ship/hull_plate_normal.png",
   "plate_size": [
     1797,
     875
   ],
+  "_capacity": "How many bodies a compartment holds, friend or foe. Enforced in sim/ \u2014 a move into a full room is refused and logged.",
   "rooms": [
     {
-      "id": "medbay",
-      "label": "MEDBAY",
-      "system": "medbay",
+      "id": "cockpit",
+      "label": "COCKPIT",
+      "system": "",
+      "capacity": 4,
       "polygon": [
         [
-          290,
-          330
+          1508,
+          400
         ],
         [
-          448,
-          330
+          1524,
+          382
         ],
         [
-          448,
-          438
+          1598,
+          382
         ],
         [
-          290,
-          438
+          1618,
+          402
+        ],
+        [
+          1618,
+          477
+        ],
+        [
+          1598,
+          501
+        ],
+        [
+          1524,
+          501
+        ],
+        [
+          1508,
+          483
         ]
       ],
       "adjacent": [
-        "shields"
-      ]
-    },
-    {
-      "id": "shields",
-      "label": "SHIELDS",
-      "system": "shields",
-      "polygon": [
-        [
-          505,
-          248
-        ],
-        [
-          642,
-          248
-        ],
-        [
-          642,
-          358
-        ],
-        [
-          505,
-          358
-        ]
-      ],
-      "adjacent": [
-        "medbay",
-        "weapons"
+        "airlock",
+        "greenhouse"
       ]
     },
     {
       "id": "weapons",
-      "label": "WEAPONS",
+      "label": "TURRET CONTROL",
       "system": "weapons",
+      "capacity": 4,
       "polygon": [
         [
-          665,
-          238
+          970,
+          167
         ],
         [
-          898,
-          238
+          1225,
+          167
         ],
         [
-          898,
+          1225,
+          370
+        ],
+        [
+          970,
+          370
+        ]
+      ],
+      "adjacent": [
+        "airlock",
+        "greenhouse",
+        "magazine",
+        "prison",
+        "shields"
+      ]
+    },
+    {
+      "id": "magazine",
+      "label": "MAGAZINE",
+      "system": "",
+      "capacity": 2,
+      "polygon": [
+        [
+          792,
+          166
+        ],
+        [
+          926,
+          166
+        ],
+        [
+          926,
+          371
+        ],
+        [
+          792,
+          371
+        ]
+      ],
+      "adjacent": [
+        "medbay",
+        "prison",
+        "quarters",
+        "shields",
+        "weapons"
+      ]
+    },
+    {
+      "id": "quarters",
+      "label": "CREW QUARTERS",
+      "system": "",
+      "capacity": 6,
+      "polygon": [
+        [
+          558,
+          166
+        ],
+        [
+          748,
+          166
+        ],
+        [
+          748,
+          371
+        ],
+        [
+          558,
+          371
+        ]
+      ],
+      "adjacent": [
+        "engines",
+        "magazine",
+        "medbay",
+        "prison",
+        "reactor"
+      ]
+    },
+    {
+      "id": "greenhouse",
+      "label": "GREENHOUSE",
+      "system": "",
+      "capacity": 2,
+      "polygon": [
+        [
+          1286,
+          264
+        ],
+        [
+          1443,
+          264
+        ],
+        [
+          1463,
+          286
+        ],
+        [
+          1463,
+          350
+        ],
+        [
+          1450,
+          368
+        ],
+        [
+          1286,
+          368
+        ]
+      ],
+      "adjacent": [
+        "airlock",
+        "cockpit",
+        "shields",
+        "weapons"
+      ]
+    },
+    {
+      "id": "engines",
+      "label": "ENGINE ROOM",
+      "system": "engines",
+      "capacity": 4,
+      "polygon": [
+        [
+          234,
+          172
+        ],
+        [
+          485,
+          172
+        ],
+        [
+          485,
+          310
+        ],
+        [
+          234,
+          310
+        ]
+      ],
+      "adjacent": [
+        "medbay",
+        "quarters",
+        "reactor"
+      ]
+    },
+    {
+      "id": "lifesupport",
+      "label": "LIFE SUPPORT",
+      "system": "",
+      "capacity": 2,
+      "polygon": [
+        [
+          234,
+          322
+        ],
+        [
+          379,
+          322
+        ],
+        [
+          379,
           382
         ],
         [
-          665,
+          234,
           382
         ]
       ],
       "adjacent": [
-        "shields",
         "reactor"
       ]
     },
@@ -93,93 +247,627 @@
       "id": "reactor",
       "label": "REACTOR",
       "system": "",
+      "capacity": 4,
       "polygon": [
         [
-          668,
-          552
+          234,
+          392
         ],
         [
-          898,
-          552
+          440,
+          392
         ],
         [
-          898,
-          718
+          440,
+          498
         ],
         [
-          668,
-          718
+          234,
+          498
         ]
       ],
       "adjacent": [
-        "weapons",
-        "engines"
-      ]
-    },
-    {
-      "id": "engines",
-      "label": "ENGINES",
-      "system": "engines",
-      "polygon": [
-        [
-          1192,
-          486
-        ],
-        [
-          1420,
-          486
-        ],
-        [
-          1420,
-          642
-        ],
-        [
-          1192,
-          642
-        ]
-      ],
-      "adjacent": [
-        "reactor",
-        "cargo"
+        "cargo",
+        "engines",
+        "lifesupport",
+        "medbay",
+        "quarters"
       ]
     },
     {
       "id": "cargo",
-      "label": "CARGO",
+      "label": "CARGO BAY",
       "system": "",
+      "capacity": 6,
       "polygon": [
         [
-          1435,
-          472
+          234,
+          510
         ],
         [
-          1700,
-          472
+          485,
+          510
         ],
         [
-          1700,
-          648
+          485,
+          729
         ],
         [
-          1435,
-          648
+          234,
+          729
         ]
       ],
       "adjacent": [
-        "engines"
+        "reactor"
+      ]
+    },
+    {
+      "id": "medbay",
+      "label": "MEDBAY",
+      "system": "medbay",
+      "capacity": 4,
+      "polygon": [
+        [
+          557,
+          465
+        ],
+        [
+          748,
+          465
+        ],
+        [
+          748,
+          643
+        ],
+        [
+          557,
+          643
+        ]
+      ],
+      "adjacent": [
+        "engines",
+        "magazine",
+        "prison",
+        "quarters",
+        "reactor"
+      ]
+    },
+    {
+      "id": "prison",
+      "label": "PRISON BLOCK",
+      "system": "",
+      "capacity": 4,
+      "polygon": [
+        [
+          792,
+          465
+        ],
+        [
+          957,
+          465
+        ],
+        [
+          957,
+          645
+        ],
+        [
+          792,
+          645
+        ]
+      ],
+      "adjacent": [
+        "magazine",
+        "medbay",
+        "quarters",
+        "shields",
+        "weapons"
+      ]
+    },
+    {
+      "id": "shields",
+      "label": "SHIELD ROOM",
+      "system": "shields",
+      "capacity": 4,
+      "polygon": [
+        [
+          1002,
+          466
+        ],
+        [
+          1207,
+          466
+        ],
+        [
+          1207,
+          646
+        ],
+        [
+          1002,
+          646
+        ]
+      ],
+      "adjacent": [
+        "airlock",
+        "greenhouse",
+        "magazine",
+        "prison",
+        "weapons"
+      ]
+    },
+    {
+      "id": "airlock",
+      "label": "BOARDING BAY",
+      "system": "",
+      "capacity": 4,
+      "polygon": [
+        [
+          1260,
+          465
+        ],
+        [
+          1461,
+          465
+        ],
+        [
+          1461,
+          596
+        ],
+        [
+          1432,
+          620
+        ],
+        [
+          1260,
+          620
+        ]
+      ],
+      "adjacent": [
+        "cockpit",
+        "greenhouse",
+        "shields",
+        "weapons"
       ]
     }
   ],
-  "_doors": "One entry per adjacent pair. Crew walk through these rather than straight between room centres.",
+  "_waypoints": "Corridor centreline nodes, in plate pixels, traced off the yellow stripe.",
+  "waypoints": [
+    {
+      "id": "w_aft_n",
+      "at": [
+        519,
+        250
+      ]
+    },
+    {
+      "id": "w_cross",
+      "at": [
+        519,
+        420
+      ]
+    },
+    {
+      "id": "w_aft_mid",
+      "at": [
+        519,
+        436
+      ]
+    },
+    {
+      "id": "w_aft_s",
+      "at": [
+        519,
+        555
+      ]
+    },
+    {
+      "id": "w_spine_a",
+      "at": [
+        676,
+        420
+      ]
+    },
+    {
+      "id": "w_spine_b",
+      "at": [
+        856,
+        420
+      ]
+    },
+    {
+      "id": "w_spine_c",
+      "at": [
+        1091,
+        420
+      ]
+    },
+    {
+      "id": "w_spine_d",
+      "at": [
+        1398,
+        420
+      ]
+    },
+    {
+      "id": "w_bow",
+      "at": [
+        1498,
+        420
+      ]
+    }
+  ],
+  "corridor_edges": [
+    [
+      "w_aft_n",
+      "w_cross"
+    ],
+    [
+      "w_cross",
+      "w_aft_mid"
+    ],
+    [
+      "w_aft_mid",
+      "w_aft_s"
+    ],
+    [
+      "w_cross",
+      "w_spine_a"
+    ],
+    [
+      "w_spine_a",
+      "w_spine_b"
+    ],
+    [
+      "w_spine_b",
+      "w_spine_c"
+    ],
+    [
+      "w_spine_c",
+      "w_spine_d"
+    ],
+    [
+      "w_spine_d",
+      "w_bow"
+    ]
+  ],
+  "_room_doors": "Where each compartment opens onto the corridor, and which waypoint it opens next to.",
+  "room_doors": [
+    {
+      "room": "engines",
+      "waypoint": "w_aft_n",
+      "at": [
+        488,
+        250
+      ]
+    },
+    {
+      "room": "reactor",
+      "waypoint": "w_aft_mid",
+      "at": [
+        444,
+        436
+      ]
+    },
+    {
+      "room": "cargo",
+      "waypoint": "w_aft_s",
+      "at": [
+        488,
+        555
+      ]
+    },
+    {
+      "room": "quarters",
+      "waypoint": "w_spine_a",
+      "at": [
+        676,
+        374
+      ]
+    },
+    {
+      "room": "medbay",
+      "waypoint": "w_spine_a",
+      "at": [
+        676,
+        462
+      ]
+    },
+    {
+      "room": "magazine",
+      "waypoint": "w_spine_b",
+      "at": [
+        856,
+        374
+      ]
+    },
+    {
+      "room": "prison",
+      "waypoint": "w_spine_b",
+      "at": [
+        856,
+        462
+      ]
+    },
+    {
+      "room": "weapons",
+      "waypoint": "w_spine_c",
+      "at": [
+        1091,
+        373
+      ]
+    },
+    {
+      "room": "shields",
+      "waypoint": "w_spine_c",
+      "at": [
+        1091,
+        463
+      ]
+    },
+    {
+      "room": "greenhouse",
+      "waypoint": "w_spine_d",
+      "at": [
+        1398,
+        374
+      ]
+    },
+    {
+      "room": "airlock",
+      "waypoint": "w_spine_d",
+      "at": [
+        1398,
+        462
+      ]
+    },
+    {
+      "room": "cockpit",
+      "waypoint": "w_bow",
+      "at": [
+        1502,
+        420
+      ]
+    }
+  ],
+  "_doors": "One entry per adjacent pair, kept for door_between(). Crew no longer walk straight through these \u2014 ui/ expands each hop into a corridor route \u2014 but the overlay and the fallback path still read them.",
   "doors": [
     {
       "between": [
-        "medbay",
+        "airlock",
+        "cockpit"
+      ],
+      "at": [
+        1448,
+        420
+      ]
+    },
+    {
+      "between": [
+        "airlock",
+        "greenhouse"
+      ],
+      "at": [
+        1398,
+        420
+      ]
+    },
+    {
+      "between": [
+        "airlock",
         "shields"
       ],
       "at": [
-        468,
-        340
+        1244,
+        420
+      ]
+    },
+    {
+      "between": [
+        "airlock",
+        "weapons"
+      ],
+      "at": [
+        1244,
+        420
+      ]
+    },
+    {
+      "between": [
+        "cargo",
+        "reactor"
+      ],
+      "at": [
+        519,
+        495
+      ]
+    },
+    {
+      "between": [
+        "cockpit",
+        "greenhouse"
+      ],
+      "at": [
+        1448,
+        420
+      ]
+    },
+    {
+      "between": [
+        "engines",
+        "medbay"
+      ],
+      "at": [
+        597,
+        335
+      ]
+    },
+    {
+      "between": [
+        "engines",
+        "quarters"
+      ],
+      "at": [
+        597,
+        335
+      ]
+    },
+    {
+      "between": [
+        "engines",
+        "reactor"
+      ],
+      "at": [
+        519,
+        343
+      ]
+    },
+    {
+      "between": [
+        "greenhouse",
+        "shields"
+      ],
+      "at": [
+        1244,
+        420
+      ]
+    },
+    {
+      "between": [
+        "greenhouse",
+        "weapons"
+      ],
+      "at": [
+        1244,
+        420
+      ]
+    },
+    {
+      "between": [
+        "lifesupport",
+        "reactor"
+      ],
+      "at": [
+        343,
+        386
+      ]
+    },
+    {
+      "between": [
+        "magazine",
+        "medbay"
+      ],
+      "at": [
+        766,
+        420
+      ]
+    },
+    {
+      "between": [
+        "magazine",
+        "prison"
+      ],
+      "at": [
+        856,
+        420
+      ]
+    },
+    {
+      "between": [
+        "magazine",
+        "quarters"
+      ],
+      "at": [
+        766,
+        420
+      ]
+    },
+    {
+      "between": [
+        "magazine",
+        "shields"
+      ],
+      "at": [
+        973,
+        420
+      ]
+    },
+    {
+      "between": [
+        "magazine",
+        "weapons"
+      ],
+      "at": [
+        973,
+        420
+      ]
+    },
+    {
+      "between": [
+        "medbay",
+        "prison"
+      ],
+      "at": [
+        766,
+        420
+      ]
+    },
+    {
+      "between": [
+        "medbay",
+        "quarters"
+      ],
+      "at": [
+        676,
+        420
+      ]
+    },
+    {
+      "between": [
+        "medbay",
+        "reactor"
+      ],
+      "at": [
+        597,
+        428
+      ]
+    },
+    {
+      "between": [
+        "prison",
+        "quarters"
+      ],
+      "at": [
+        766,
+        420
+      ]
+    },
+    {
+      "between": [
+        "prison",
+        "shields"
+      ],
+      "at": [
+        973,
+        420
+      ]
+    },
+    {
+      "between": [
+        "prison",
+        "weapons"
+      ],
+      "at": [
+        973,
+        420
+      ]
+    },
+    {
+      "between": [
+        "quarters",
+        "reactor"
+      ],
+      "at": [
+        597,
+        428
       ]
     },
     {
@@ -188,38 +876,8 @@
         "weapons"
       ],
       "at": [
-        652,
-        300
-      ]
-    },
-    {
-      "between": [
-        "weapons",
-        "reactor"
-      ],
-      "at": [
-        782,
-        470
-      ]
-    },
-    {
-      "between": [
-        "reactor",
-        "engines"
-      ],
-      "at": [
-        1050,
-        600
-      ]
-    },
-    {
-      "between": [
-        "engines",
-        "cargo"
-      ],
-      "at": [
-        1428,
-        560
+        1091,
+        420
       ]
     }
   ]

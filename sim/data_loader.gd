@@ -46,11 +46,34 @@ static func load_layout() -> ShipLayout:
 			if pair.size() == 2:
 				poly.append(Vector2(float(pair[0]), float(pair[1])))
 		room.polygon = poly
+		room.capacity = int(d.get("capacity", 0))
 		var adj: Array[String] = []
 		for a: Variant in d.get("adjacent", []):
 			adj.append(str(a))
 		room.adjacent = adj
 		layout.add_room(room)
+
+	for entry: Variant in raw.get("waypoints", []):
+		var d: Dictionary = entry as Dictionary
+		var at: Array = d.get("at", []) as Array
+		if at.size() == 2:
+			layout.waypoints[str(d.get("id", ""))] = Vector2(float(at[0]), float(at[1]))
+
+	var edges: Array[Array] = []
+	for entry: Variant in raw.get("corridor_edges", []):
+		var pair: Array = entry as Array
+		if pair.size() == 2:
+			edges.append([str(pair[0]), str(pair[1])])
+	layout.corridor_edges = edges
+
+	for entry: Variant in raw.get("room_doors", []):
+		var d: Dictionary = entry as Dictionary
+		var at: Array = d.get("at", []) as Array
+		if at.size() == 2:
+			layout.room_doors[str(d.get("room", ""))] = {
+				"waypoint": str(d.get("waypoint", "")),
+				"at": Vector2(float(at[0]), float(at[1])),
+			}
 
 	var doors: Array[Dictionary] = []
 	for entry: Variant in raw.get("doors", []):

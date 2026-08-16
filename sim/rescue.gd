@@ -136,6 +136,9 @@ func order_move(room_id: String) -> bool:
 	var route_to: Array[String] = layout.path(start, room_id)
 	if route_to.is_empty():
 		return false
+	if not _room_has_space(room_id):
+		_refuse_move(room_id)
+		return false
 
 	route = route_to
 	_emit("MOVE_ORDERED", LogEvent.NEUTRAL, [tock.id], {
@@ -151,9 +154,39 @@ func _begin_hop() -> void:
 		task = Task.IDLE
 		task_target = ""
 		return
+	if not _room_has_space(route[0]):
+		_refuse_move(route[0])
+		route.clear()
+		task = Task.IDLE
+		task_target = ""
+		return
 	task = Task.TRANSIT
 	task_target = route[0]
 	task_remaining = float(_timing().get("transit_seconds", 3.0))
+
+
+# A compartment holds at most `capacity` bodies, friend or foe. TOCK is excluded
+# from the count because he is the one trying to get in — he is still standing
+# in the room he is leaving, and counting him there would let him walk into a
+# room that is one over its limit while blocking him from one that is exactly
+# full.
+func _room_has_space(room_id: String) -> bool:
+	var occupants: int = 0
+	for m: CrewMember in crew_in_room(room_id):
+		if m != tock:
+			occupants += 1
+	return layout.has_space(room_id, occupants)
+
+
+# Refusals are stated in the log, not left to be inferred from a click that did
+# nothing. CLAUDE.md: if it matters, it writes a log line.
+func _refuse_move(room_id: String) -> void:
+	var room: ShipRoom = layout.get_room(room_id)
+	_emit("MOVE_REFUSED", LogEvent.WARNING, [tock.id], {
+		"room": room_id,
+		"reason": "full",
+		"capacity": room.capacity if room != null else 0,
+	})
 
 
 func order_free(crew_id: String) -> bool:

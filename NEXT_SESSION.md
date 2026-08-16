@@ -1,22 +1,25 @@
-# NEXT_SESSION.md — corridors, walls and walk routes
+# NEXT_SESSION.md — after the corridors
 
-Written at the end of the session that built the plate pipeline, for the session
-that comes after it. Delete this file once the work in it is done.
+Written at the end of the session that traced the new ship and stopped crew
+walking through walls. Delete this file once the work in it is done.
 
 ---
 
 ## Read these first
 
-`CLAUDE.md`, then the top of `SLICE.md`, then `ASSETS.md` §"Ship plate spec".
+`CLAUDE.md`, then the top of `SLICE.md`, then `ASSETS.md`.
 
 ## Where the project actually is
 
-Slice 0 (the cargo hold rescue) plays start to finish. Three render passes are
-done: the ship is a painted plate, Godot's 2D lighting is on, and crew are
-sprite sheets rendered from rigged CC0 3D models with real walk cycles.
+Slice 0 (the cargo hold rescue) plays start to finish on a new ship. The plate
+is the owner's `playerwarship1.png`, 1797x875, thirteen compartments traced off
+its bulkheads with a corridor graph traced off the yellow guidance stripe. Crew
+walk the corridors. Rooms have capacities and `sim/` enforces them.
 
-Both verify commands are green and the balance report reads **39.4s for both
-plans**, end HP [100 ×5] hack and [75 ×5] fight.
+Both verify commands are green and the balance report reads **42.4s for both
+plans**, end HP [100 ×5] hack and [75 ×5] fight. It read 39.4s on the old plate;
+the difference is one transit, because turret control is now four hops from the
+hold instead of three. Nothing was retuned to hide that.
 
 ```
 tools/verify.sh          # both; must be green before any commit
@@ -25,127 +28,74 @@ tools/verify.sh          # both; must be green before any commit
 The game is live at https://jojojo3333.github.io/cowboysandpirates/ — Pages
 deploys on every push to `main` and to `claude/**`.
 
-## The one known bug, and the job
-
-**Crew walk through walls.** `ShipView._walk_position()` moves them
-`room centre → door point → room centre` in straight lines, so they cut across
-bulkheads and sometimes cross half the ship diagonally.
-
-The fix is not a code trick. It is data: the plate now *shows* corridors, and
-the walk graph has to be traced off it.
-
 ---
 
-## Task 1 — swap the plate
+## The thing worth deciding before building anything else
 
-The project owner has replaced `assets/ship/hull_plate.png` with a new deck plan
-and deleted the old one. It is a military ship with a full corridor network, a
-yellow guidance stripe down every corridor, and roughly twelve rooms.
+**Crew detour into every room on the route.** A hop is room-to-room, so walking
+from turret control to the hold takes TOCK *through* the magazine and *through*
+the medbay — in one door and out the other — rather than straight down the
+corridor past them. The log agrees with the picture ("TOCK IN MAGAZINE"), so it
+is consistent rather than broken, but on a ship with one long central corridor
+it reads as odd, and it did not on the old six-room plate where rooms genuinely
+joined each other.
 
-1. Read the new image and get its real dimensions.
-2. Re-run `python3 tools/make_normal_map.py assets/ship/hull_plate.png` — the
-   old `hull_plate_normal.png` belongs to the old ship and will be wrong.
-3. Update `plate_size` in `data/ship_layout.json` to the new dimensions.
+Three ways out, in ascending order of cost:
 
-## Task 2 — trace the rooms
+1. **Leave it.** It is honest, it is consistent with the log, and the detours
+   are what make the ship feel big.
+2. **Make the corridor itself the graph** — every compartment adjacent to every
+   other, because that is physically true: you never pass through a room to get
+   anywhere. Costs the ship all of its travel structure; every move becomes one
+   transit, and the report drops to about 33.4s.
+3. **Charge transit by distance rather than per hop.** The corridor polyline
+   already knows how long each walk is. This is the version that makes the ship's
+   size mean something, and it is a real change to `sim/` and to
+   `scene_rescue.json`, so it wants its own slice and its own [PLAY-GATED] number.
 
-Overlay a 100px coordinate grid on the plate and read the compartments off it —
-that is how the previous two plates were traced and it works. Write polygons in
-plate pixels into `data/ship_layout.json`.
+This is an owner decision, not an engineering one. Do not pick one unasked.
 
-**Room list, with the capacities the owner decided:**
+## Carried forward, not done
 
-| Room | Capacity | Notes |
-|---|---|---|
-| Cockpit / bridge | 4 | |
-| Turret & missile control | 4 | magazine should sit beside it |
-| Shield room | 4 | |
-| Reactor | 4 | the glowing core |
-| Engine room | 4 | |
-| Life support / O2 | 2 | built into the structure near the engines |
-| Medbay | 4 | |
-| Crew quarters + food dispenser | 6 | |
-| Prison block | 4 | four cells along one wall |
-| Cargo bay | 6 | |
-| Greenhouse | 2 | |
-| Airlock / boarding bay | 4 | where boarders come in |
+- **The six boarders as visible enemies.** The owner's plan is three in the
+  cockpit and three in the crew quarters. Room capacity now exists, which was
+  the stated prerequisite. Note the cockpit holds 4 and crew quarters holds 6.
+- **UI chrome.** Still the biggest remaining visual gap, still deserves its own
+  session against the owner's mock-up. Kenney's fantasy border 9-slices are
+  already in `assets/ui/` and still unwired.
+- **Weapon mount overlays.** Small transparent PNGs at traced hull coordinates,
+  the way FTL does upgrades. No art for it exists yet. The new plate has six
+  turret barbettes on the hull, three top and three bottom, which are the
+  obvious mount points.
 
-**Six ids must not change**, because `data/scene_rescue.json` and the rescue
-script key off them: `weapons`, `shields`, `medbay`, `reactor`, `engines`,
-`cargo`. Map those onto the matching compartments; the six new rooms get new ids.
+## Open questions for the owner
 
-**`tock_start_room` is `weapons` and `captives_room` is `cargo`.** On the old
-plate those were three hops apart, which is what the 39.4s balance figure comes
-from. On a twelve-room ship they will not be three hops apart, so **the balance
-report will move.** That is correct and expected. Report the new number; do not
-reshape the layout to preserve 39.4s, and do not touch `data/scene_rescue.json`
-timings to compensate.
-
-## Task 3 — trace the corridor graph
-
-New section in `data/ship_layout.json`. Suggested shape, but choose whatever is
-simplest to read:
-
-```json
-"waypoints": [ {"id": "w1", "at": [x, y]}, ... ],
-"corridor_edges": [ ["w1", "w2"], ["w2", "w3"], ... ],
-"room_doors": [ {"room": "cargo", "waypoint": "w7", "at": [x, y]}, ... ]
-```
-
-- Follow the **yellow centre stripe** — it was put in the generation prompt
-  specifically to be traced, so use it.
-- Waypoints at every corridor junction, every bend, and every room doorway.
-- A corridor that dead-ends against the hull gets no waypoints. The plate has a
-  few of those; they are cosmetic and can be ignored.
-- Validate in `tools/validate_data.gd`: every room must reach every other room
-  through the graph, and every waypoint coordinate must be inside the plate.
-
-## Task 4 — make crew follow it
-
-- `ShipLayout.path()` currently returns a room-to-room chain from `adjacent`.
-  Keep that — the simulation should stay unaware of geometry.
-- In `ui/`, expand each room hop into a corridor route: room centre → its door
-  → waypoints along the graph → next room's door → next room centre. A
-  breadth-first search over `corridor_edges` is enough; there is no need for A*
-  at this scale.
-- `_walk_position()` then walks that polyline instead of a three-point line.
-- `ShipOverlay._draw_route()` already draws whatever `route_points()` returns,
-  so the dashed route line will follow the corridors for free.
-
-**Check it by looking, not by reasoning.** Capture a walk with a throwaway
-script (there was one last session: instantiate `main.tscn`, `choose_plan`,
-`order_move`, tick, save PNGs) and assemble a GIF. If a crew member clips a
-bulkhead you will see it immediately and never spot it in the numbers.
-
-## Task 5 — room capacity
-
-Add `capacity` per room in the layout, and enforce it in `sim/` — a room holds
-at most N bodies, friend or foe. This is a simulation rule, so it goes in
-`sim/`, writes a log line when a move is refused, and moves the balance report.
-
-Not urgent. Do it after crew walk correctly, and only if there is time.
-
----
-
-## Not in this session
-
-- The six boarders as visible enemies. The owner's plan is three in the cockpit
-  and three in the crew quarters, and it wants room capacity to exist first.
-- UI chrome. It is the biggest remaining visual gap and it deserves its own
-  session against the owner's mock-up.
-- Weapon mount overlays. Agreed as the way to do upgrades later — small
-  transparent PNGs placed at traced hull coordinates, the way FTL does it — but
-  no art for it exists yet.
+- **Plate licence, still unanswered.** Two owner-supplied plates now, neither
+  with a recorded origin, in a public repository that publishes to GitHub Pages.
+  `ASSETS.md` has the detail. One line closes it: generated, bought, or found.
+- **The magazine is a thirteenth room.** The brief asked for twelve. The plate
+  has a fully walled compartment full of missile racks beside turret control,
+  with its own doorway onto the corridor, so leaving it out would have left a
+  visible room nobody could ever enter. It is in as `magazine`, capacity 2. Say
+  if it should be folded into `weapons` instead.
+- **Two service nooks are not rooms.** A closet off the engine room and a
+  vestibule between the reactor and the corridor. Both are narrow, both are
+  full of equipment, neither is somewhere a person stands. They are walkable in
+  the sense that the reactor's route passes through the vestibule; they are just
+  not compartments.
 
 ## Things that have cost time before
 
 - **Check the crew models' capabilities before writing code around them.** They
   are rigged with `walk`, `idle`, `die`, `sprint`, `holding-right` and about
-  twenty more clips. A session was spent faking a walk before anyone looked.
+  twenty more clips.
 - **`CLIP_FRAMES` in `ui/ship_view.gd` must match `CLIPS` in
   `tools/render_crew.gd`**, or sheets are sliced wrongly.
 - **The render camera's aim point moves the figure the opposite way to the
   intuition** — aiming higher pushes the body down in frame.
 - **Never conclude from a headless screenshot that something feels good.**
   Colour and geometry are checkable; feel is not.
+- **A "bright pixels are bulkheads" mask reads the yellow guidance stripe as a
+  wall.** That cost a confusing round of false positives while checking the
+  routes. Exclude yellow before thresholding.
 - The owner is not a programmer. Explain in outcomes, not in diffs.

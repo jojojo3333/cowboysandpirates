@@ -36,7 +36,14 @@ committed.
 **A render pass may never change a simulation number.** If the balance report
 moves, something has leaked from `ui/` into `sim/` and the pass is wrong. The
 report is the check: it read 39.4s for both plans before RENDER PASS 1 and 39.4s
-after.
+after all three.
+
+**Replacing the ship is not a render pass.** A new plate with a different set of
+compartments changes how far apart things are, and distance is a simulation
+number. The corridor work of 2026-08-16 moved the report from 39.4s to **42.4s**
+for exactly that reason and no other — see the note under RENDER PASS 3. If a
+pass that only changes how the ship is *drawn* moves the report, that is still
+the bug this rule is here to catch.
 
 ## Where the ship art comes from — settled
 
@@ -85,8 +92,33 @@ kept here only because it is the evidence for the paragraph above.
 - Before this, crew were generated from pixel loops — two ellipses and a
   highlight. Three rounds of parameter tuning could not have fixed that.
 
-**Reported, not tuned:** the balance report has read 39.4s for both plans
-through all three passes, with end HP [100 ×5] hack and [75 ×5] fight.
+**Reported, not tuned:** the balance report read 39.4s for both plans through
+all three passes, with end HP [100 ×5] hack and [75 ×5] fight.
+
+## Corridors and walk routes — 2026-08-16
+
+Not a render pass: it changed the ship, not the way the ship is drawn.
+
+The known bug was that crew walked through walls — `_walk_position()` moved them
+room centre → door → room centre in straight lines, so they cut across
+bulkheads. The fix was data. The owner supplied a new plate with a full corridor
+network and a yellow guidance stripe painted down every corridor specifically so
+it could be traced, and it was: thirteen compartments as polygons, nine
+waypoints on the stripe, and a door tapping each compartment onto the graph.
+`ui/corridor_map.gd` expands each room hop into that polyline; `sim/` still asks
+for a chain of rooms and knows nothing about geometry.
+
+Checked by looking, not by reasoning: a walk from turret control to the hold was
+captured frame by frame, and every corridor point of all 78 room-to-room routes
+was tested against the bulkheads in the art. None crosses one.
+
+Rooms also gained a `capacity` and `sim/` now refuses a move into a full
+compartment and logs the refusal.
+
+**Reported, not tuned: 42.4s for both plans**, up from 39.4s, end HP unchanged
+at [100 ×5] hack and [75 ×5] fight. The whole difference is one transit. On the
+old six-room plate turret control was three hops from the hold; on this one it
+is four. Nothing was retuned to hide that and nothing should be.
 
 ## Still open
 
@@ -117,8 +149,9 @@ cut the boarders' suit oxygen, or take the weapons cached in the hold and fight.
 **Done when:** a human can launch it, pick a plan, route TOCK to the hold, free
 all five, and reach the end screen without touching the console. ✅
 
-Reported, not tuned: both plans resolve in **39.4s** of simulated time under
-random-legal play. The difference between them is entirely moral and entirely
+Reported, not tuned: both plans resolve in **42.4s** of simulated time under
+random-legal play — 39.4s until the ship was replaced on 2026-08-16, when turret
+control went from three hops from the hold to four. The difference between them is entirely moral and entirely
 in the HP column, which is the intended shape.
 
 ## Slice 1 — Mission 2: the boarders' ship attacks (target: 30 min)

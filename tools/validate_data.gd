@@ -21,11 +21,13 @@ func _init() -> void:
 	var class_ids: Array = []
 	if classes != null:
 		class_ids = _check_classes(classes)
+
+	# The layout is checked first because crew.json is checked against it.
+	var room_ids: Array = _check_layout()
 	var crew_ids: Array = []
 	if crew != null:
-		crew_ids = _check_crew(crew, class_ids)
+		crew_ids = _check_crew(crew, class_ids, room_ids)
 
-	var room_ids: Array = _check_layout()
 	_check_scene(room_ids, crew_ids)
 
 	for w: String in warnings:
@@ -151,6 +153,48 @@ func _check_layout() -> Array:
 					% [room.id, other_id]
 				)
 
+	# --- the corridor graph -------------------------------------------------
+	# Crew walk this, so a waypoint off the plate or a compartment with no way
+	# out is a crew member walking through a wall, which is the bug this data
+	# exists to fix.
+	var plate: Rect2 = Rect2(Vector2.ZERO, layout.plate_size)
+
+	for wp_id: Variant in layout.waypoints.keys():
+		var at: Vector2 = layout.waypoints[wp_id] as Vector2
+		if not plate.has_point(at):
+			errors.append(
+				"ship_layout.json: waypoint '%s' is outside the plate: %s" % [str(wp_id), str(at)]
+			)
+
+	for edge: Array in layout.corridor_edges:
+		for end: Variant in edge:
+			if not layout.waypoints.has(str(end)):
+				errors.append("ship_layout.json: corridor_edge names unknown waypoint '%s'" % str(end))
+
+	for room_id: Variant in layout.room_doors.keys():
+		if layout.get_room(str(room_id)) == null:
+			errors.append("ship_layout.json: room_doors names unknown room '%s'" % str(room_id))
+		var wp: String = layout.corridor_waypoint(str(room_id))
+		if not layout.waypoints.has(wp):
+			errors.append(
+				"ship_layout.json: room '%s' opens onto unknown waypoint '%s'" % [str(room_id), wp]
+			)
+		var door_at: Vector2 = layout.corridor_door(str(room_id))
+		if not plate.has_point(door_at):
+			errors.append(
+				"ship_layout.json: door for room '%s' is outside the plate: %s"
+				% [str(room_id), str(door_at)]
+			)
+
+	_check_reachability(layout, ids)
+
+	for room: ShipRoom in layout.rooms:
+		if room.capacity <= 0:
+			warnings.append(
+				"ship_layout.json: room '%s' has no capacity — it will hold any number of bodies"
+				% room.id
+			)
+
 	# An asymmetric adjacency list produces a room fire can enter and not leave.
 	# That bug would only surface once v0.2 exists, which is exactly why it is
 	# worth catching now.
@@ -158,6 +202,55 @@ func _check_layout() -> Array:
 		errors.append("ship_layout.json: asymmetric adjacency %s" % problem)
 
 	return ids
+
+
+# Every compartment must reach every other one by walking: through its corridor
+# door, along corridor_edges, and out through another compartment's door. A room
+# with no corridor door of its own — life support opens only into the reactor —
+# may use an authored bulkhead door instead, and nothing else may.
+func _check_reachability(layout: ShipLayout, room_ids: Array) -> void:
+	if room_ids.is_empty():
+		return
+
+	var graph: Dictionary = {}
+	var link: Callable = func(a: String, b: String) -> void:
+		if not graph.has(a):
+			graph[a] = [] as Array[String]
+		if not graph.has(b):
+			graph[b] = [] as Array[String]
+		(graph[a] as Array[String]).append(b)
+		(graph[b] as Array[String]).append(a)
+
+	for edge: Array in layout.corridor_edges:
+		if edge.size() == 2:
+			link.call("wp:" + str(edge[0]), "wp:" + str(edge[1]))
+	for room_id: Variant in layout.room_doors.keys():
+		link.call("room:" + str(room_id), "wp:" + layout.corridor_waypoint(str(room_id)))
+	for d: Dictionary in layout.doors:
+		var pair: Array = d.get("between", []) as Array
+		if pair.size() != 2:
+			continue
+		var a: String = str(pair[0])
+		var b: String = str(pair[1])
+		if layout.corridor_door(a) == Vector2.ZERO or layout.corridor_door(b) == Vector2.ZERO:
+			link.call("room:" + a, "room:" + b)
+
+	var start: String = "room:" + str(room_ids[0])
+	var seen: Dictionary = {start: true}
+	var queue: Array[String] = [start]
+	while not queue.is_empty():
+		var current: String = queue.pop_front()
+		for neighbour: String in (graph.get(current, []) as Array[String]):
+			if not seen.has(neighbour):
+				seen[neighbour] = true
+				queue.append(neighbour)
+
+	for room_id: Variant in room_ids:
+		if not seen.has("room:" + str(room_id)):
+			errors.append(
+				"ship_layout.json: room '%s' cannot be walked to from '%s'"
+				% [str(room_id), str(room_ids[0])]
+			)
 
 
 func _check_scene(room_ids: Array, crew_ids: Array) -> void:
@@ -178,6 +271,16 @@ func _check_scene(room_ids: Array, crew_ids: Array) -> void:
 		var cid: String = str(entry)
 		if not crew_ids.is_empty() and not crew_ids.has(cid):
 			errors.append("scene_rescue.json: captive '%s' is not in crew.json" % cid)
+
+	# The hold has to fit every captive plus whoever walks in to cut them loose,
+	# or the scene deadlocks on a move the simulation is right to refuse.
+	var layout_for_scene: ShipLayout = DataLoader.load_layout()
+	var hold: ShipRoom = layout_for_scene.get_room(str(scene.get("captives_room", "")))
+	if hold != null and hold.capacity > 0 and hold.capacity < captives.size() + 1:
+		errors.append(
+			"ship_layout.json: '%s' holds %d but the rescue puts %d captives plus TOCK in it"
+			% [hold.id, hold.capacity, captives.size()]
+		)
 
 	var timing: Dictionary = scene.get("timing", {}) as Dictionary
 	for key: String in [
@@ -203,7 +306,7 @@ func _check_scene(room_ids: Array, crew_ids: Array) -> void:
 			errors.append("scene_rescue.json: no ending for plan '%s'" % str(plan))
 
 
-func _check_crew(data: Variant, class_ids: Array) -> Array:
+func _check_crew(data: Variant, class_ids: Array, layout_room_ids: Array) -> Array:
 	var out_ids: Array = []
 	if not (data is Dictionary) or not (data as Dictionary).has("crew"):
 		errors.append("crew.json: missing top-level 'crew' array")
@@ -230,6 +333,15 @@ func _check_crew(data: Variant, class_ids: Array) -> Array:
 			errors.append("crew.json: '%s' references unknown class '%s'" % [mid, cls])
 		if cls == "commander":
 			commanders += 1
+
+		# A starting room that is not on the ship is a crew member standing
+		# nowhere. It went unnoticed for three plates because the rescue moves
+		# every captive into the hold before anyone is drawn.
+		var start_room: String = str(m.get("starting_room", ""))
+		if not layout_room_ids.is_empty() and not layout_room_ids.has(start_room):
+			errors.append(
+				"crew.json: '%s' starts in '%s', which is not a room" % [mid, start_room]
+			)
 
 	if commanders != 1:
 		errors.append("crew.json: expected exactly one commander, found %d" % commanders)

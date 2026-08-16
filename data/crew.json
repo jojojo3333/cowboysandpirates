@@ -41,7 +41,7 @@
       "name": "Sunny Kwon",
       "class": "medic",
       "flavour": "The name is a joke somebody made a long time ago and she kept. Treats a body as an engineering problem with a shorter deadline. Has strong opinions about the Clone Bay and has not shared them.",
-      "starting_room": "medical"
+      "starting_room": "medbay"
     },
     {
       "id": "tock",

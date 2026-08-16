@@ -6,12 +6,21 @@ class_name ShipLayout
 
 var rooms: Array[ShipRoom] = []
 
-# Everything below is for the viewer. The simulation reads `adjacent` only —
-# see path() — so a ship's shape can change without the sim noticing.
+# Everything below is for the viewer. The simulation reads `adjacent` and
+# `capacity` only — see path() and has_space() — so a ship's shape can change
+# without the sim noticing.
 var plate_path: String = ""
 var plate_normal_path: String = ""
 var plate_size: Vector2 = Vector2(1848.0, 855.0)
 var doors: Array[Dictionary] = []
+
+# The corridor network, traced off the yellow guidance stripe painted down the
+# middle of every corridor on the plate. Held here because this is where the
+# rest of the plate-space data lives; walking it is ui/'s job (CorridorMap), so
+# nothing in sim/ ever reads a waypoint.
+var waypoints: Dictionary = {}          # id -> Vector2
+var corridor_edges: Array[Array] = []   # [[waypoint_id, waypoint_id], ...]
+var room_doors: Dictionary = {}         # room id -> {"waypoint": String, "at": Vector2}
 
 var _by_id: Dictionary = {}
 
@@ -45,6 +54,27 @@ func get_room(room_id: String) -> ShipRoom:
 
 func has_room(room_id: String) -> bool:
 	return _by_id.has(room_id)
+
+
+# Where a compartment opens onto the corridor. Vector2.ZERO if it has no
+# corridor door — life support only opens into the reactor.
+func corridor_door(room_id: String) -> Vector2:
+	var entry: Dictionary = room_doors.get(room_id, {}) as Dictionary
+	return entry.get("at", Vector2.ZERO) as Vector2
+
+
+func corridor_waypoint(room_id: String) -> String:
+	var entry: Dictionary = room_doors.get(room_id, {}) as Dictionary
+	return str(entry.get("waypoint", ""))
+
+
+# True when the compartment has room for one more body. A room with no authored
+# capacity is unlimited, so an older layout keeps working.
+func has_space(room_id: String, occupants: int) -> bool:
+	var room: ShipRoom = get_room(room_id)
+	if room == null or room.capacity <= 0:
+		return true
+	return occupants < room.capacity
 
 
 func are_adjacent(a: String, b: String) -> bool:

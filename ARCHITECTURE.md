@@ -56,6 +56,7 @@ sim/                    plain RefCounted classes. No Node, no Control, no
 ui/                     Control-building code, called from main.gd.
                         NO .tscn FILES. Ever.
   combat_screen.gd      the ship view
+  corridor_map.gd       expands a room hop into a corridor walk   [slice 0]
   log_view.gd           formats LogEvents into coloured text     [v0.2]
   crew_panel.gd         portraits, HP, XP, state
   jump_screen.gd        repair / upgrade between encounters
@@ -63,7 +64,7 @@ ui/                     Control-building code, called from main.gd.
 data/                   content. no logic.
   classes.json          class definitions and bonus keys         [v0.2]
   crew.json             the starting crew                        [v0.2]
-  ship_layout.json      rooms, systems, adjacency                [slice 0]
+  ship_layout.json      rooms, capacities, corridors, adjacency  [slice 0]
   enemies.json          encounter templates                      [slice 3]
   weapons.json          charge time, power cost, shots, damage   [slice 0]
 
@@ -78,6 +79,14 @@ tools/
 **`tools/sim_runner.gd`, not `sim/sim_runner.gd`.** The path is fixed by
 `GAME_SPEC v0.1` acceptance criterion 7, which spells the invocation out:
 `godot --headless --script res://tools/sim_runner.gd -- --runs 200`.
+
+**The corridor graph lives in `data/`, and walking it lives in `ui/`.** The
+plate paints corridors; `ship_layout.json` traces them as waypoints and edges;
+`ui/corridor_map.gd` turns a room-to-room hop into the polyline a person would
+walk. `sim/` never reads a waypoint — it asks `ShipLayout.path()` for a chain of
+rooms and charges one transit per hop, exactly as before. That split is why
+replacing the ship plate moved the balance report and changed no simulation
+code.
 
 `ui/` filenames are indicative and may be reshaped. `sim/` and
 `tools/sim_runner.gd` are not — the harness and the verify script key off them.

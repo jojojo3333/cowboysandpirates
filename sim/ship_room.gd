@@ -17,6 +17,11 @@ var system: String = ""
 var polygon: PackedVector2Array = PackedVector2Array()
 var adjacent: Array[String] = []
 
+# How many bodies fit, friend or foe. A simulation rule, not a drawing hint: a
+# move into a full compartment is refused and the refusal is logged. Zero means
+# "no limit authored", so a layout written before capacities existed still runs.
+var capacity: int = 0
+
 
 func is_adjacent_to(room_id: String) -> bool:
 	return adjacent.has(room_id)

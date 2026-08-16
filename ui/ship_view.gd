@@ -60,6 +60,9 @@ const CREW_SCALE: float = 0.52
 var scene: RescueScene = null
 var layout: ShipLayout = null
 
+# Expands each room-to-room hop into a walk through the corridors.
+var _corridors: CorridorMap = null
+
 var _world: Node2D = null
 var _plate: Sprite2D = null
 var _overlay: ShipOverlay = null
@@ -85,6 +88,8 @@ func _ready() -> void:
 # main.gd assigns scene and layout after construction, so the world is built on
 # the first frame that has both rather than in _ready.
 func _build() -> void:
+	_corridors = CorridorMap.new(layout)
+
 	_world = Node2D.new()
 	add_child(_world)
 
@@ -286,41 +291,29 @@ func _slot(room: ShipRoom, index: int, total: int) -> Vector2:
 	)
 
 
-# TOCK walks from where he is, through the doorway, to the next compartment —
-# not in a straight line between two room centres. The simulation already
-# models the hop as a duration; this reads the progress it publishes and spends
-# it along the real two-leg path.
+# TOCK walks from where he is, along the corridors, to the next compartment —
+# not in a straight line between two room centres, and not diagonally through a
+# bulkhead. The simulation already models the hop as a duration; this reads the
+# progress it publishes and spends it along the real corridor polyline.
 func _walk_position() -> Vector2:
-	var from_room: ShipRoom = layout.get_room(scene.tock.room)
-	var to_room: ShipRoom = layout.get_room(scene.task_target)
-	if from_room == null or to_room == null:
+	var walk: PackedVector2Array = _corridors.hop(scene.tock.room, scene.task_target)
+	if walk.is_empty():
 		return Vector2.ZERO
-
-	var a: Vector2 = from_room.centre()
-	var door: Vector2 = layout.door_between(scene.tock.room, scene.task_target)
-	var b: Vector2 = to_room.centre()
-
-	var leg_a: float = a.distance_to(door)
-	var leg_b: float = door.distance_to(b)
-	var total: float = maxf(leg_a + leg_b, 0.001)
-	var travelled: float = total * scene.task_progress()
-
-	if travelled <= leg_a:
-		return a.lerp(door, travelled / maxf(leg_a, 0.001))
-	return door.lerp(b, (travelled - leg_a) / maxf(leg_b, 0.001))
+	return CorridorMap.point_along(walk, scene.task_progress())
 
 
-# The ordered route as a polyline through every doorway still to be passed.
+# The whole ordered route as one polyline through the corridors, so the dashed
+# route line the overlay draws follows the same path the crew member walks.
 func route_points() -> PackedVector2Array:
 	var out: PackedVector2Array = PackedVector2Array([crew_position(scene.tock)])
 	var previous: String = scene.tock.room
 	for room_id: String in scene.route:
-		var door: Vector2 = layout.door_between(previous, room_id)
-		if door != Vector2.ZERO:
-			out.append(door)
-		var room: ShipRoom = layout.get_room(room_id)
-		if room != null:
-			out.append(room.centre())
+		var walk: PackedVector2Array = _corridors.hop(previous, room_id)
+		# The first point of each hop is the room centre the crew member is
+		# leaving, which the previous hop already ended on — and on the first
+		# hop it is behind them, because they have already started walking.
+		for i: int in range(1, walk.size()):
+			out.append(walk[i])
 		previous = room_id
 	return out
 

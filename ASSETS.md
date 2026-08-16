@@ -34,22 +34,29 @@ because collections drift.
 
 | File | Source | Licence | Fetched | Used for |
 |------|--------|---------|---------|----------|
-| `assets/ship/hull_plate.png` | Supplied by the project owner as `playership1large.png`. **Origin not stated.** | Owner-supplied | 2026-08-16 | The player ship: hull, compartments, corridors |
-| `assets/ship/hull_plate_normal.png` | Derived from the plate by `tools/make_normal_map.py` | follows the plate | 2026-08-15 | 2D lighting relief |
+| `assets/ship/hull_plate.png` | Supplied by the project owner as `playerwarship1.png`. **Origin not stated.** 1797x875. | Owner-supplied | 2026-08-16 | The player ship: hull, compartments, corridors |
+| `assets/ship/hull_plate_normal.png` | Derived from the plate by `tools/make_normal_map.py` | follows the plate | 2026-08-16 | 2D lighting relief |
 | `assets/crew/*.png` (24 sheets) | Rendered by `tools/render_crew.gd` from Kenney *Mini Characters* 1.0 | CC0 1.0 | 2026-08-16 | Crew sprite sheets, 8 models x 3 clips |
 | `assets/ui/kenney_fantasy_borders/**` (140 files) | Kenney *Fantasy UI Borders* 1.0 | CC0 1.0 | 2026-08-16 | 9-slice panel and border frames, not yet wired up |
 | `tools/crew_src/*.glb` (12 files) | Kenney *Mini Characters* 1.0, GLB format | CC0 1.0 | 2026-08-15 | Render source, kept so the pipeline can be re-run |
 
-**Open question on the current plate.** `playership1large.png` was committed to
-`main` by the project owner and moved here. Its origin has not been recorded. It
-has the look of published RPG cartography rather than a generated image, and
-this repository is public and publishes to GitHub Pages, so if it came from a
-book, a marketplace or a VTT pack, the licence needs to permit redistribution.
-One line from the owner closes this — generated, bought, or found.
+**Open question on the current plate — still open, and now about a second
+image.** The plate was replaced on 2026-08-16 with `playerwarship1.png`, again
+supplied by the project owner, again with no origin recorded. It has the same
+look of published RPG cartography rather than a generated image, and this
+repository is public and publishes to GitHub Pages, so if it came from a book, a
+marketplace or a VTT pack, the licence needs to permit redistribution. One line
+from the owner closes this — generated, bought, or found.
 
-The previous plate was model-generated from a prompt describing shape language
-only, naming no property. Its prompt is kept below because it is the spec any
-replacement should be commissioned against.
+**It is under the resolution minimum.** The spec below asks for 2048 px on the
+long axis and this plate is 1797. Nothing is broken by that — the ship still
+fills the panel at the sizes the game runs at — but a larger window will reach
+the plate's limit sooner than the spec intends, so a higher-resolution version
+is worth asking for if one exists.
+
+Both plates so far were owner-supplied. The prompt kept below is the spec any
+commissioned replacement should be written against; the first plate was
+generated from it, describing shape language only and naming no property.
 
 ## Ship plate spec — what the renderer needs from a ship image
 
