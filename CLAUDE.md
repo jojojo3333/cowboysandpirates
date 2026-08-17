@@ -178,6 +178,7 @@ it passed.**
 | `BACKLOG.md` | **What is next.** The one ordered queue, plus the briefs for work done outside this repo. |
 | `SLICE.md` | Build order, current slice at the top, render passes below |
 | `GAME_SPEC.md` | Design spec, v0.1 and v0.2 in one file |
+| `SYSTEMS.md` | **What the game can do.** Built, half built, known missing. Not a queue. |
 | `MISSION_01.md` | What mission 1 is, and everything building it requires. Not a queue. |
 | `ARCHITECTURE.md` | How `sim/` and `ui/` divide |
 | `ASSETS.md` | Every imported file, the ship plate spec, the render pipeline |

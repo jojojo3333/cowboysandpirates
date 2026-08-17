@@ -11,6 +11,7 @@ broken, and it doubles as the brief pack for work done outside this repo.
 | **What is next?** | **this file** |
 | What is the build order, and what is done? | `SLICE.md` |
 | What are the rules of the game? | `GAME_SPEC.md` |
+| What can the game already do? | `SYSTEMS.md` |
 | What does mission 1 consist of, and what does it need? | `MISSION_01.md` |
 | How do `sim/` and `ui/` divide? | `ARCHITECTURE.md` |
 | Where did an asset come from, and what does a new one need? | `ASSETS.md` |
@@ -75,6 +76,18 @@ tools/verify.sh            # rules, static, sim — all three
    `tools/render_soldier.gd`, and the owner has the comparison renders. Moving
    it means re-running `--mode bake` and pasting the `CREW_ART_OFFSET` it
    prints into `ui/ship_view.gd`.
+
+### Known fixable — the walk
+
+**The walk animation looks wrong, on crew and pirates alike.** They are the same
+sprite sheets, so it is one problem and not two. Recorded as *known fixable* —
+the mechanism is sound, the fix is understood, and it is deliberately not being
+done now. `SYSTEMS.md §4` keeps that list.
+
+What fixing it involves: the pose constants at the top of
+`tools/render_soldier.gd`, then `--mode bake`. `--mode preview` now shoots at
+the game's own camera, so it can be judged where it lands rather than side-on —
+which is what went wrong the first time.
 
 ### Remake GAME_SPEC.md
 

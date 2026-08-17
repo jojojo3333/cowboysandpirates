@@ -120,8 +120,8 @@ takes *by design*. When it moves, it gets reported and stated — never tuned ba
 | # | Deliverable | Honest assessment |
 |---|---|---|
 | C1 | **Boarder look** | Cheapest good answer: the same rendered figure in a hostile tint, as the enemy ship's crew already use. A separate model is a want, not a need. |
-| C2 | **A "beaten" beat** | We have `die` — an authored forward collapse. For a pirate striking someone, that plus a small lunge on the attacker reads well enough at this size. **This is the next chunk**, together with a `play_clip` beat in the cutscene runner. |
-| C3 | **A "dragged" pose** | The genuinely new one. Cheapest version that reads: the victim holds a prone pose and moves with the pirate, drawn slightly behind and below. It will look clunky. That is the agreed price of act 1 existing at all. |
+| C2 | ~~**A "beaten" beat**~~ | **Deferred by the owner, 2026-08-17.** Needed for a finished game, not for now. The question it would have answered — *can this engine do scripted character action at all?* — was already answered by the boarding walking itself. |
+| C3 | ~~**A "dragged" pose**~~ | **Deferred, same call.** The expensive half of the cutscene, and the cold open plus a cut to tied-up crew tells the story without it. |
 | C4 | **Camera focus** *(optional)* | The view currently always shows the whole ship. A cutscene reads far better if it can push in on a compartment. Genuinely optional — cut it first if time runs out. |
 
 All three new poses are authored on the Silver Soldier's own rig, the same way
@@ -203,9 +203,10 @@ The demo's job is that one person feels what this becomes. Judged only against
 that:
 
 1. **Camera focus (C4).** Nice, not necessary.
-2. **The dragging cutscene (B3, C3).** Expensive, and the cold open plus the cut
-   to tied-up crew already tells the story. A line of TOCK's voice over a black
-   screen does most of this beat's work.
+2. ~~The dragging cutscene.~~ **Already cut, 2026-08-17**, and deliberately
+   rather than for time. Proving the engine *can* do scripted character action
+   was the valuable part, and the boarding walk proved it. The striking and
+   dragging themselves are polish for a finished game.
 3. **Per-crew banter (B7)** down to one or two lines rather than six.
 
 **Do not cut:** the cold open (A1, A2, B1) or the simultaneous hack (B5). The
