@@ -42,6 +42,7 @@ func _init() -> void:
 	await _check_boot_scene()
 	await _check_boarders()
 	await _check_cutscene()
+	_check_dialogue()
 	await _check_selection()
 	var first: Array = await _run(dump)
 	# Same seed, same steps, same answers. If this ever disagrees, something is
@@ -458,6 +459,77 @@ func _check_cutscene() -> void:
 	# beats fired but nobody actually walked anywhere.
 	_check("cutscene-takes-time", scene.time > 1.0,
 		"the cutscene resolved in %.2fs of game time; nobody walked" % scene.time)
+
+
+# Conversations play, advance, and skip — with no window open.
+#
+# That last part is the reason this is possible at all. The Dialogue lives in
+# `sim/` and is ticked by the scene that owns it, exactly as the Cutscene is;
+# `ui/dialogue_view.gd` only draws. The first version had the view holding the
+# clock, and a conversation that only advances while somebody is watching it is
+# by definition untestable.
+func _check_dialogue() -> void:
+	var config: Dictionary = DataLoader.load_json("res://data/mission_01.json")
+	var all: Dictionary = config.get("dialogue", {}) as Dictionary
+	_check("dialogue-data", not all.is_empty(), "data/mission_01.json has no dialogue")
+
+	# Ids are how a voice file finds its line. A duplicate means one of them
+	# silently plays the wrong audio, which is exactly the sort of thing nobody
+	# notices until a recording session is already done.
+	var seen: Dictionary = {}
+	for key: String in all:
+		var sequence: Dictionary = all[key] as Dictionary
+		for entry: Variant in sequence.get("lines", []):
+			var line: Dictionary = entry as Dictionary
+			var id: String = str(line.get("id", ""))
+			_check("dialogue-line-id", id != "", "a line in '%s' has no id" % key)
+			_check("dialogue-line-unique", not seen.has(id), "duplicate line id '%s'" % id)
+			seen[id] = true
+			_check("dialogue-line-text", str(line.get("text", "")) != "",
+				"line '%s' has no text" % id)
+			_check("dialogue-line-seconds", float(line.get("seconds", 0.0)) > 0.0,
+				"line '%s' has no duration; it would never advance on its own" % id)
+			# A bubble needs somebody to point at. Without an actor it silently
+			# falls back to the comms panel, which is a reasonable failure but a
+			# bad surprise, so it is caught here instead.
+			if str(line.get("style", "comms")) == "bubble":
+				_check("dialogue-bubble-actor", str(line.get("actor", "")) != "",
+					"line '%s' is styled as a bubble but names no actor" % id)
+
+	for key: String in all:
+		var played: Dialogue = Dialogue.from_config(all[key] as Dictionary)
+		var count: int = played.lines.size()
+		played.start()
+		_check("dialogue-starts", played.playing or count == 0,
+			"sequence '%s' did not start" % key)
+
+		var steps: int = 0
+		while played.playing and steps < MAX_STEPS:
+			played.tick(STEP)
+			steps += 1
+		_check("dialogue-finishes", not played.playing,
+			"sequence '%s' never finished" % key)
+		_check("dialogue-takes-time", count == 0 or steps > 1,
+			"sequence '%s' finished instantly; its lines have no duration" % key)
+
+		# Skipping lands at the end immediately, and lands in the same place
+		# watching does. Dialogue carries no side effects precisely so that this
+		# holds — a line that changed the game would make skipping a different
+		# game, and the first bug report would come from somebody who skipped.
+		var skipped: Dialogue = Dialogue.from_config(all[key] as Dictionary)
+		skipped.start()
+		skipped.skip()
+		_check("dialogue-skips", not skipped.playing, "sequence '%s' could not be skipped" % key)
+		_check("dialogue-skip-clears", skipped.current().is_empty(),
+			"sequence '%s' still shows a line after being skipped" % key)
+
+		# And clicking through works: one advance per line reaches the end.
+		var clicked: Dialogue = Dialogue.from_config(all[key] as Dictionary)
+		clicked.start()
+		for i: int in range(count):
+			clicked.advance()
+		_check("dialogue-advances", not clicked.playing,
+			"sequence '%s' did not end after %d advances" % [key, count])
 
 
 # Box-select, then order everyone at once.

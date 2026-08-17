@@ -46,6 +46,24 @@ the files above. What is left divides cleanly by audience, and merging across
 that line would mean the owner reading Godot trivia to find out what the game
 does. Four files is a readable set; nine files with no map was not.
 
+### Why the folder looks like 164 files
+
+Because most of it is not ours. Of 116 files tracked in git, **51 were written
+by a person**: 27 scripts, 14 documents, 5 content files, 5 scenes. Another 11
+are supplied art.
+
+The rest is bookkeeping the engine insists on and nobody ever reads:
+
+| | |
+|---|---|
+| **`.uid`** — 27 of them | Godot writes one beside every script, to track it across renames. Never edited by hand. |
+| **`.import`** — 11 | Godot writes one beside every image, describing how it was imported. Same. |
+| **`.godot/`** — 24 MB | The engine's cache. Not in the repo at all; it regenerates. |
+| **`.git/`** | Version history. Not part of the game. |
+
+So: **ignore anything ending in `.uid` or `.import`, and both dot-folders.**
+What is left is the list above, and it is small.
+
 ---
 
 ## The layout

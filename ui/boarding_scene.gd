@@ -20,8 +20,12 @@ const ENEMY: Color = Color(0.92, 0.55, 0.50)
 
 var scene: RescueScene = null
 var cutscene: Cutscene = null
+var dialogue: Dialogue = null
 
 var _ship: ShipView = null
+var _dialogue_view: DialogueView = null
+var _config: Dictionary = {}
+var _stage: String = ""
 var _caption: Label = null
 var _status: Label = null
 var _replay: Button = null
@@ -34,6 +38,11 @@ func _ready() -> void:
 
 
 func _start() -> void:
+	# Replay builds everything fresh. Reusing the old Dialogue or Cutscene would
+	# leave their `finished` signals connected twice and advance the stage
+	# machine two steps at a time.
+	cutscene = null
+	dialogue = null
 	scene = RescueScene.new(0)
 	# The cutscene runs before the player has chosen anything, and order_move
 	# only accepts orders once the scene is executing. Choosing here is staging,
@@ -43,34 +52,69 @@ func _start() -> void:
 	_ship.scene = scene
 	_ship.layout = scene.layout
 
-	var config: Dictionary = DataLoader.load_json("res://data/mission_01.json")
-	var cutscenes: Dictionary = config.get("cutscenes", {}) as Dictionary
-	cutscene = Cutscene.from_config(scene, cutscenes.get("boarding", {}) as Dictionary)
-	cutscene.finished.connect(_on_finished)
-	cutscene.start()
+	_config = DataLoader.load_json("res://data/mission_01.json")
 
-	_caption.text = "Four boarders come through the airlock."
+	# The cold open first, then the boarding, then the crew reacting. Each stage
+	# starts the next when it ends, which is the whole sequencing mechanism for
+	# now — a beat that can start another beat is a real want, and it is not one
+	# this scene needs to demonstrate the pieces work.
+	_stage = "cold_open"
+	_caption.text = "Cold open. TOCK over the intercom."
 	_replay.visible = false
+	_play_dialogue("cold_open")
 
 
 func _process(delta: float) -> void:
 	if scene == null:
 		return
-	cutscene.tick(delta)
-	scene.tick(delta)
+	# A sequence that pauses the simulation holds the cutscene too, so nobody
+	# walks through a conversation that is meant to happen before they move.
+	var held: bool = dialogue != null and dialogue.playing and dialogue.pauses_simulation
+	if dialogue != null:
+		dialogue.tick(delta)
+	if not held:
+		if cutscene != null:
+			cutscene.tick(delta)
+		scene.tick(delta)
 
+	# The cutscene does not exist during the cold open, which happens first.
+	if cutscene == null:
+		_status.text = "stage: %s" % _stage
+		return
 	var walking: int = 0
 	for m: CrewMember in scene.hostiles():
 		if m.is_moving():
 			walking += 1
-	_status.text = "cutscene %d%%   ·   %d of %d boarders moving" % [
-		int(cutscene.progress() * 100.0), walking, scene.hostiles().size()
+	_status.text = "%s   ·   cutscene %d%%   ·   %d of %d boarders moving" % [
+		_stage, int(cutscene.progress() * 100.0), walking, scene.hostiles().size()
 	]
 
 
+func _play_dialogue(key: String) -> void:
+	var all: Dictionary = _config.get("dialogue", {}) as Dictionary
+	dialogue = Dialogue.from_config(all.get(key, {}) as Dictionary)
+	dialogue.finished.connect(_on_dialogue_finished)
+	_dialogue_view.play(dialogue)
+	dialogue.start()
+
+
+func _on_dialogue_finished() -> void:
+	if _stage == "cold_open":
+		_stage = "boarding"
+		_caption.text = "Four boarders come through the airlock."
+		var cutscenes: Dictionary = _config.get("cutscenes", {}) as Dictionary
+		cutscene = Cutscene.from_config(scene, cutscenes.get("boarding", {}) as Dictionary)
+		cutscene.finished.connect(_on_finished)
+		cutscene.start()
+	elif _stage == "reaction":
+		_caption.text = "End of the sequence. Replay to watch it again."
+		_replay.visible = true
+
+
 func _on_finished() -> void:
-	_caption.text = "They reach the crew quarters. (Striking and dragging are the next chunk — see MISSION_01.md.)"
-	_replay.visible = true
+	_stage = "reaction"
+	_caption.text = "They reach the crew quarters. The crew have opinions."
+	_play_dialogue("quarters_bubbles")
 
 
 func _build_ui() -> void:
@@ -103,6 +147,12 @@ func _build_ui() -> void:
 	_ship.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_ship.custom_minimum_size = Vector2(640.0, 300.0)
 	frame.add_child(_ship)
+
+	# Over everything, so a bubble is never clipped by the ship panel and never
+	# scales with the plate.
+	_dialogue_view = DialogueView.new()
+	_dialogue_view.ship = _ship
+	add_child(_dialogue_view)
 
 	_caption = _label("", TEXT, 14)
 	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

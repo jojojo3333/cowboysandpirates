@@ -102,10 +102,10 @@ Ordered by how much else depends on them.
 
 | # | System | What it is | Size |
 |---|---|---|---|
-| B1 | **Dialogue sequences** | A scripted list of lines: who speaks, what they say, which audio file, how long to hold, whether the sim is paused meanwhile. Advances on time or on click. **Skippable.** | Medium — the backbone of act 1 |
+| B1 | ~~**Dialogue sequences**~~ | **Done 2026-08-17.** `sim/dialogue.gd` plus `ui/dialogue_view.gd`: speaker, text, duration, click-to-advance, skip, and two presentations — a bubble over whoever is speaking, or a comms panel for a voice with no body in the room. Placeholder lines in `data/mission_01.json`. **Audio is still missing.** | — |
 | B2 | ~~**Boarders as actors**~~ | **Done 2026-08-17.** Four pirates in `data/scene_rescue.json`, a `pirate` class in `data/classes.json`, `is_hostile` on `CrewMember`. They walk the same corridors and are drawn by the same code as the crew; only the colour and who may command them differ. | — |
 | B3 | **A cutscene runner** — *movement done, actions not* | `sim/cutscene.gd` plays a timeline of beats against the simulation, headlessly. Moving actors and waiting for them to arrive both work. **What it cannot do yet is anything other than move**: no striking, no dragging, no clip triggering. | Half done |
-| B4 | **The captain as a speaker** | The player has no representation at all today. Needs a name and somewhere for their lines to appear. No sprite required. | Small |
+| B4 | ~~**The captain as a speaker**~~ | **Done 2026-08-17.** A line with no `actor` shows in the comms panel, which is exactly what a voice from off-ship needs. No sprite required, as expected. | — |
 | B5 | **Simultaneous hack** | Three seconds, then all four boarders drop together. Today it is 18 seconds staggered 4 apart, one at a time. | Small — but see the warning below |
 | B6 | **A prone/collapsed hold** | A dropped boarder must *stay* dropped, holding the last frame of `die` rather than looping. | Small |
 | B7 | **Banter triggers** | Fire a dialogue sequence when a specific crew member is freed. The event stream already carries `CREW_FREED`. | Small |

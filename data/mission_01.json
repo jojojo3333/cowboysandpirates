@@ -38,5 +38,87 @@
         "pirate_4": "airlock"
       }
     }
+  },
+  "_placeholder_warning": "EVERY LINE BELOW IS PLACEHOLDER. Written to exercise the dialogue system, not to ship. The owner writes the real script; these exist so timing, wrapping, bubble placement and skipping can be judged before a word of it is final. TOCK's lines do follow his rules - no contractions, states probabilities unprompted, says nothing the log has not already said plainly - because a placeholder in the wrong voice tests the wrong line lengths.",
+  "dialogue": {
+    "cold_open": {
+      "_comment": "Act 1 beat 1. TOCK over the intercom, the captain answering from their bunk. Neither has a body in the room, so both are comms panels.",
+      "pause_simulation": true,
+      "lines": [
+        {
+          "id": "cold_open_tock_01",
+          "speaker": "TOCK",
+          "style": "comms",
+          "seconds": 3.6,
+          "text": "[PLACEHOLDER] Captain. We are being boarded. I counted four of them at the airlock eleven seconds ago."
+        },
+        {
+          "id": "cold_open_captain_01",
+          "speaker": "CAPTAIN",
+          "style": "comms",
+          "seconds": 2.8,
+          "text": "[PLACEHOLDER] What. I was asleep four seconds ago."
+        },
+        {
+          "id": "cold_open_tock_02",
+          "speaker": "TOCK",
+          "style": "comms",
+          "seconds": 4.4,
+          "text": "[PLACEHOLDER] My monitor says half the crew is already subdued. The probability that you are next is high. I would put it at eighty per cent."
+        },
+        {
+          "id": "cold_open_captain_02",
+          "speaker": "CAPTAIN",
+          "style": "comms",
+          "seconds": 2.4,
+          "text": "[PLACEHOLDER] ...Damn."
+        },
+        {
+          "id": "cold_open_tock_03",
+          "speaker": "TOCK",
+          "style": "comms",
+          "seconds": 3.8,
+          "text": "[PLACEHOLDER] I am in my charging pod. They have not looked in here. I do not think they consider me a person."
+        }
+      ]
+    },
+    "quarters_bubbles": {
+      "_comment": "Act 1, after the boarding cutscene. Bubbles over people standing in the ship, to test anchoring and the tail. Anyone whose actor id is missing falls back to a comms panel rather than pointing at nothing.",
+      "pause_simulation": false,
+      "lines": [
+        {
+          "id": "bubble_smith_01",
+          "speaker": "SMITH",
+          "actor": "smith",
+          "style": "bubble",
+          "seconds": 3.2,
+          "text": "[PLACEHOLDER] Nobody move. Nobody be a hero. That includes me."
+        },
+        {
+          "id": "bubble_ostrow_01",
+          "speaker": "OSTROW",
+          "actor": "ostrow",
+          "style": "bubble",
+          "seconds": 3.0,
+          "text": "[PLACEHOLDER] Four of them. I have counted worse odds and I did not enjoy those either."
+        },
+        {
+          "id": "bubble_tock_01",
+          "speaker": "TOCK",
+          "actor": "tock",
+          "style": "bubble",
+          "seconds": 4.0,
+          "text": "[PLACEHOLDER] I can reach their suit software. It will take three seconds. I am telling you this so that you can decide, not so that you feel better."
+        },
+        {
+          "id": "bubble_vela_01",
+          "speaker": "VELA",
+          "actor": "vela",
+          "style": "bubble",
+          "seconds": 3.4,
+          "text": "[PLACEHOLDER] Do it, TOCK. I have got a wrench and a bad attitude and that is the whole plan otherwise."
+        }
+      ]
+    }
   }
 }

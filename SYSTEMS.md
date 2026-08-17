@@ -80,6 +80,7 @@ a day.
 | System | What works | What does not |
 |---|---|---|
 | **Cutscenes — actions** | Moving actors, staging them, waiting for arrival. | Cannot trigger a clip, cannot make one actor do something *to* another, cannot change anyone's state. Every beat is a move order. |
+| **Dialogue** | Sequences of lines with a speaker, a duration, timing, click-to-advance and skip. Two presentations: a bubble anchored over whoever is speaking, and a comms panel for a voice with no body in the room. Headless — a whole conversation runs and is asserted with no window open. | **No audio.** No manifest, no playback, no fallback to test. The line durations are written by hand and nothing yet checks them against a recording. |
 | **The hack** | Boarders go down on a timer and the log says so. | The four boarders that now exist as actors are not connected to it — the countdown still works off a number. They do not fall over. |
 | **TOCK's voice** | Lines fire on events and appear as text. | No audio, no timing control, no sequencing, no way to write a conversation. |
 
@@ -93,8 +94,7 @@ Nothing here is scheduled. `BACKLOG.md` decides that.
 
 | System | Why |
 |---|---|
-| **Dialogue sequences** | A conversation is a list of lines with a speaker, timing, and the ability to skip. Act 1 opens with one. See `MISSION_01.md` B1. |
-| **Audio playback** | Voice files, with a manifest and a graceful miss — a missing file must degrade to text, never break the build. |
+| **Audio playback** | Voice files, with a manifest and a graceful miss — a missing file must degrade to text, never break the build. The dialogue system already treats the written duration as authoritative, so a silent line still holds for the right length. |
 | **Clip triggering in cutscenes** | So a beat can say "play this pose" and not only "walk there". |
 | **Actor state changes in cutscenes** | So a beat can restrain someone, or knock them down, and the mission afterwards inherits that state instead of setting it up separately. |
 
@@ -108,7 +108,37 @@ Nothing here is scheduled. `BACKLOG.md` decides that.
 | **Compartment damage** | A hit room goes dark. The lighting already supports this; nothing drives it. |
 | **Crew stations** | Standing at a system does something. Optional for the player by design. |
 | **The enemy ship as a place** | It is currently a picture: no rooms, no corridors, no doors. Nothing can stand anywhere meaningful, let alone move. Everything about enemy crew is blocked on this. |
-| **Enemy behaviour** | Making a hostile ship look busy rather than like scenery. |
+| **Enemy behaviour** | See below — it is not one system. |
+
+### Enemy behaviour is an orchestra, not an instrument
+
+Recorded because the owner spotted it before it was built, which saved the
+usual way of finding out. *"On our ship they look for fights. On their ship they
+man the weapon stations, unless they are boarded or something is burning."*
+That sentence needs at least six separate things, and **three of them do not
+exist in any form**:
+
+| Piece | State |
+|---|---|
+| **A goal per actor** — what am I trying to do right now | Missing. Actors have a destination or nothing. |
+| **A decision tick** — when do I reconsider | Missing. |
+| **Perception** — what do I know about? who is near me? what is on fire? | Missing. |
+| **Person-to-person combat** | **Missing entirely.** Crew and pirates walk past each other forever. "Look for fights" has nothing to find. |
+| **Stations that can be manned** | **Missing.** Needs ship systems and power, which is the whole act 2 fight. |
+| **Fire** | **Missing**, and deliberately parked. |
+| **Priority and interruption** — drop what I am doing because something worse happened | Missing, and the hardest of the six to get right. |
+
+**The order this implies.** Behaviour is not blocked on being difficult, it is
+blocked on having nothing to want. Built today, a pirate would walk to a room,
+arrive, and stand there — which reads as a bug rather than a placeholder, the
+same trap as faking the beating. Fighting and stations come first; behaviour is
+what makes them look deliberate afterwards.
+
+**And one thing to hold on to when it is built.** The player must be able to
+*read* it. A pirate crossing the ship because it is going to man a gun and a
+pirate crossing the ship because it is hunting someone look identical. If it
+matters, it writes a log line — that rule is exactly what enemy behaviour will
+lean on hardest.
 
 ### For a game rather than a mission
 
