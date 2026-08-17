@@ -204,6 +204,34 @@ this hostile in?", because the answer does not exist. **Tracing the enemy plate
 is the prerequisite for enemy crew that do anything at all**, and it comes
 before behaviour work, not after.
 
+## 5c. Selection is view state
+
+Who the player has selected lives on `ShipView`, not on `RescueScene`. The
+simulation does not care, and the moment it does care, the rule in section 1
+starts leaking: `sim/` would gain a concept that exists only because there is a
+mouse.
+
+The order path is the test of it. `ShipView` emits a set of crew ids;
+`main.gd` turns that into `scene.order_move(room_id, ids)`; the simulation
+receives a list of people and a destination and knows nothing about boxes,
+clicks or highlighting.
+
+**Movement is per crew member.** Until 2026-08-17 the scene held one
+`task`/`task_target`/`route`, and they always meant TOCK, because for one slice
+only TOCK could move. Selecting five people and ordering them somewhere is not a
+bigger version of that — it is the same state owned by the right object, so it
+now lives on `CrewMember`. `Task.TRANSIT` is gone; `Task` is FREEING and IDLE,
+because cutting a captive loose genuinely is scene-wide: only TOCK does it, and
+only one at a time.
+
+Two things fall out of that and are worth knowing before touching it:
+
+- **Capacity is counted on committed occupancy**, not current — everyone in the
+  room plus everyone walking towards it. Without that, five crew asked one after
+  another all see the same empty room and all set off for it.
+- **`order_move` succeeds if anybody accepts.** Ordering six people into a room
+  with space for four should move four and refuse two, not refuse all six.
+
 ## 5b. The truth layer — `tools/game_probe.gd`
 
 **Ask the running game what is true. Do not infer it from pixels.**

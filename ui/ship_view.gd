@@ -22,6 +22,16 @@ class_name ShipView
 signal room_clicked(room_id: String)
 signal crew_clicked(crew_id: String)
 
+# A drag finished. Carries every crew member inside the box, which may be empty
+# — an empty box on bare deck is how a player clears their selection.
+signal crew_box_selected(crew_ids: Array)
+
+# How far the mouse must travel before a press counts as a drag rather than a
+# click. Without this, every click is a 1x1 selection box and nothing is ever
+# clickable: hands shake, and a mouse reports motion between press and release
+# almost every time.
+const DRAG_THRESHOLD: float = 6.0
+
 # How dark the plate sits before any light touches it. Lights add on top, so
 # this is the "lights out" look of the ship.
 const AMBIENT: Color = Color(0.82, 0.85, 0.92)
@@ -87,6 +97,16 @@ var _anim_clock: float = 0.0
 var _fit_scale: float = 1.0
 var _hover_room: String = ""
 var _hover_crew: String = ""
+
+# Who is selected, and the drag in progress. Selection is view state, not
+# simulation state: the simulation does not care who the player has clicked on,
+# and putting it in sim/ would be the first crack in the wall ARCHITECTURE.md
+# spends its first section defending.
+var selected: Array[String] = []
+var _drag_from: Vector2 = Vector2.ZERO
+var _drag_to: Vector2 = Vector2.ZERO
+var _dragging: bool = false
+var _pressed: bool = false
 
 # Combat shows two ships from the same distance. The enemy plate is mirrored so
 # the bows face each other, while every room, crew position and click still uses
@@ -251,6 +271,13 @@ func to_plate(local: Vector2) -> Vector2:
 	return (local - _world.position) / _fit_scale
 
 
+# The inverse. Only `tools/play.gd` needs it, so that a test can say "drag a box
+# over the whole ship" in plate coordinates and have real mouse events land in
+# the right place whatever the zoom happens to be.
+func to_screen(plate_point: Vector2) -> Vector2:
+	return plate_point * _fit_scale + _world.position
+
+
 # --- crew ------------------------------------------------------------------
 
 func all_crew() -> Array[CrewMember]:
@@ -262,16 +289,18 @@ func all_crew() -> Array[CrewMember]:
 	return out
 
 
-func _tock_in_transit() -> bool:
-	return scene.task == RescueScene.Task.TRANSIT and scene.task_target != ""
+# Anybody walking, not just TOCK. This used to be `_tock_in_transit()` and it
+# had to be, because the simulation could only ever have one person in motion.
+func _in_transit(member: CrewMember) -> bool:
+	return member.is_moving()
 
 
 # The single source of truth for where a crew member stands. Drawing, the
 # sprites and hit-testing all read this, so a click can never land beside the
 # figure it looks like it is on.
 func crew_position(member: CrewMember) -> Vector2:
-	if member == scene.tock and _tock_in_transit():
-		return _walk_position()
+	if _in_transit(member):
+		return _walk_position(member)
 
 	var room: ShipRoom = layout.get_room(member.room)
 	if room == null:
@@ -285,7 +314,7 @@ func crew_position(member: CrewMember) -> Vector2:
 func _occupants(room_id: String) -> Array[CrewMember]:
 	var out: Array[CrewMember] = []
 	for m: CrewMember in all_crew():
-		if m.room == room_id and not (m == scene.tock and _tock_in_transit()):
+		if m.room == room_id and not _in_transit(m):
 			out.append(m)
 	return out
 
@@ -318,19 +347,19 @@ func _slot(room: ShipRoom, index: int, total: int) -> Vector2:
 # not in a straight line between two room centres, and not diagonally through a
 # bulkhead. The simulation already models the hop as a duration; this reads the
 # progress it publishes and spends it along the real corridor polyline.
-func _walk_position() -> Vector2:
-	var walk: PackedVector2Array = _corridors.hop(scene.tock.room, scene.task_target)
+func _walk_position(member: CrewMember) -> Vector2:
+	var walk: PackedVector2Array = _corridors.hop(member.room, member.move_target)
 	if walk.is_empty():
 		return Vector2.ZERO
-	return CorridorMap.point_along(walk, scene.task_progress())
+	return CorridorMap.point_along(walk, member.move_progress())
 
 
 # The whole ordered route as one polyline through the corridors, so the dashed
 # route line the overlay draws follows the same path the crew member walks.
-func route_points() -> PackedVector2Array:
-	var out: PackedVector2Array = PackedVector2Array([crew_position(scene.tock)])
-	var previous: String = scene.tock.room
-	for room_id: String in scene.route:
+func route_points_for(member: CrewMember) -> PackedVector2Array:
+	var out: PackedVector2Array = PackedVector2Array([crew_position(member)])
+	var previous: String = member.room
+	for room_id: String in member.route:
 		var walk: PackedVector2Array = _corridors.hop(previous, room_id)
 		# The first point of each hop is the room centre the crew member is
 		# leaving, which the previous hop already ended on — and on the first
@@ -351,7 +380,7 @@ func _sync_crew() -> void:
 		_crew_last[member.id] = at
 		sprite.position = at
 
-		var walking: bool = member == scene.tock and _tock_in_transit()
+		var walking: bool = _in_transit(member)
 		var clip: String = "walk" if walking else "idle"
 		var facing: int = _facing_for(at - previous) if walking else FACING_IDLE
 
@@ -466,21 +495,50 @@ func _pulse_lights() -> void:
 
 # --- input -----------------------------------------------------------------
 
+# Left button does two jobs, told apart by whether the mouse moved:
+#
+#   press, move, release  → a selection box
+#   press, release        → a click on whatever is under the cursor
+#
+# The two cannot be separated at press time, so the decision is deferred to
+# release. That is also why the click actions live in the release branch rather
+# than the press branch, where they used to be.
 func _gui_input(event: InputEvent) -> void:
-	# Hover feedback. Without it nothing on the ship reacts until it is clicked,
-	# and a player cannot tell what is clickable from what is painted on.
 	var motion: InputEventMouseMotion = event as InputEventMouseMotion
 	if motion != null:
-		_update_hover(to_plate(motion.position))
+		var here: Vector2 = to_plate(motion.position)
+		if _pressed:
+			_drag_to = here
+			if not _dragging and _drag_from.distance_to(here) > DRAG_THRESHOLD:
+				_dragging = true
+		# Hover feedback. Without it nothing on the ship reacts until it is
+		# clicked, and a player cannot tell what is clickable from what is
+		# painted on.
+		_update_hover(here)
 		return
 
 	var click: InputEventMouseButton = event as InputEventMouseButton
-	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
+	if click == null or click.button_index != MOUSE_BUTTON_LEFT:
 		return
 	if scene == null or layout == null or _world == null:
 		return
 
+	if click.pressed:
+		_pressed = true
+		_dragging = false
+		_drag_from = to_plate(click.position)
+		_drag_to = _drag_from
+		accept_event()
+		return
+
+	# Released.
+	_pressed = false
 	var at: Vector2 = to_plate(click.position)
+	if _dragging:
+		_dragging = false
+		crew_box_selected.emit(_crew_in_box(selection_box()))
+		accept_event()
+		return
 
 	# Crew are smaller and stand inside rooms, so they are tested first, at the
 	# exact positions the sprites were placed.
@@ -495,6 +553,29 @@ func _gui_input(event: InputEvent) -> void:
 			room_clicked.emit(room.id)
 			accept_event()
 			return
+
+
+# The drag rectangle in plate coordinates, normalised so dragging up-and-left
+# works exactly like dragging down-and-right.
+func selection_box() -> Rect2:
+	return Rect2(_drag_from, _drag_to - _drag_from).abs()
+
+
+func is_dragging() -> bool:
+	return _dragging
+
+
+# Everyone the player can actually command. A box drawn over tied captives
+# selects nobody, because ordering them anywhere would be refused and a
+# selection that cannot be acted on is a lie told by the interface.
+func _crew_in_box(box: Rect2) -> Array:
+	var out: Array = []
+	for member: CrewMember in all_crew():
+		if not member.can_take_orders():
+			continue
+		if box.has_point(crew_position(member)):
+			out.append(member.id)
+	return out
 
 
 func _update_hover(at: Vector2) -> void:

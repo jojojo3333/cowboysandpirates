@@ -29,7 +29,7 @@ extends RefCounted
 #      that is not Godot.
 
 const PHASE_NAMES: Dictionary = {0: "PROPOSAL", 1: "ACTIVE", 2: "RESOLVED"}
-const TASK_NAMES: Dictionary = {0: "IDLE", 1: "TRANSIT", 2: "FREEING", 3: "HACKING"}
+const TASK_NAMES: Dictionary = {0: "IDLE", 1: "FREEING"}
 const STATE_NAMES: Dictionary = {0: "ACTIVE", 1: "TIED", 2: "DOWN"}
 
 var _main: Node = null
@@ -60,12 +60,28 @@ func snapshot() -> Dictionary:
 	}
 
 
+# Which crew members the player has selected — the question the whole truth
+# layer was justified with, finally answerable.
+func selected() -> Array:
+	return _ship.selected.duplicate() if _ship != null else []
+
+
+# Everyone currently walking somewhere. One name per mover, so an assertion can
+# say "three people set off" without unpacking the whole roster.
+func movers() -> Array:
+	var out: Array = []
+	for member: CrewMember in _crew_list():
+		if member.is_moving():
+			out.append(member.id)
+	return out
+
+
 func task() -> Dictionary:
 	return {
 		"name": str(TASK_NAMES.get(_scene.task, _scene.task)),
 		"target": _scene.task_target,
 		"progress": _round(_scene.task_progress()),
-		"route": _scene.route.duplicate(),
+		"busy": _scene.is_busy(),
 	}
 
 
@@ -87,7 +103,12 @@ func crew() -> Array:
 			"hp": member.hp,
 			"state": str(STATE_NAMES.get(member.state, member.state)),
 			"synthetic": member.is_synthetic,
+			"moving": member.is_moving(),
+			"move_target": member.move_target,
+			"route": member.route.duplicate(),
 		}
+		if _ship != null:
+			record["selected"] = _ship.selected.has(member.id)
 		if _ship != null:
 			var point: Vector2 = _ship.crew_position(member)
 			record["at"] = [_round(point.x), _round(point.y)]

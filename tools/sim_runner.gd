@@ -87,7 +87,7 @@ func _play_once(plan: String, seed_in: int) -> Dictionary:
 
 	var elapsed: float = 0.0
 	while scene.phase != RescueScene.Phase.RESOLVED and elapsed < MAX_SECONDS:
-		if scene.task == RescueScene.Task.IDLE:
+		if not scene.is_busy():
 			_issue_next_order(scene)
 		scene.tick(TICK)
 		elapsed += TICK

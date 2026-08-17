@@ -305,11 +305,12 @@ func _update_hud() -> void:
 	_pause_caption.text = "SIMULATION PAUSED" if paused else "COMBAT PREVIEW"
 	if _tock_health != null and _player_scene.tock != null:
 		_tock_health.set_amount(_player_scene.tock.hp, _player_scene.tock.max_hp)
-	if _player_scene.task == RescueScene.Task.TRANSIT:
-		var room: ShipRoom = _player_scene.layout.get_room(_player_scene.task_target)
-		var target: String = room.label if room != null else _player_scene.task_target.to_upper()
+	if _player_scene.tock != null and _player_scene.tock.is_moving():
+		var going_to: String = _player_scene.tock.move_target
+		var room: ShipRoom = _player_scene.layout.get_room(going_to)
+		var target: String = room.label if room != null else going_to.to_upper()
 		_status.text = "TOCK → %s  ·  %d%%  ·  click a room to re-route" % [
-			target, int(_player_scene.task_progress() * 100.0),
+			target, int(_player_scene.tock.move_progress() * 100.0),
 		]
 	elif paused:
 		_status.text = "TOCK awaiting orders  ·  PAUSED"

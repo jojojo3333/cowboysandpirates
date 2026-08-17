@@ -55,11 +55,18 @@ tools/verify.sh            # rules, static, sim — all three
    Caveat, and it matters: this container can search the web but cannot fetch
    itch.io or the Godot forum, so all of it is second-hand and nothing has been
    installed. Ziva is still unchecked.
-2. **Item 1a**, crew selection and multi-crew orders. Everything is blocked on it.
-   It now has a harness waiting for it: `tools/game_probe.gd` already reports
-   crew state and `tools/verify.sh play` already plays a mission through the
-   real buttons, so "which crew member is selected" is one field and one
-   assertion away rather than a thing to eyeball in a screenshot.
+2. ~~**Item 1a**, crew selection and multi-crew orders.~~ **Done 2026-08-17.**
+   Drag a box, everyone inside it who can take an order is selected, click a
+   room and they all go. Clicking one crew member selects them; clicking a tied
+   captive still cuts them loose.
+
+   **The visible half was the small half.** The simulation modelled exactly one
+   mover — a scene-wide `task`/`task_target`/`route` that always meant TOCK —
+   so movement had to be moved onto `CrewMember` before a squad order could
+   mean anything. `Task.TRANSIT` is gone; what is left of `Task` is FREEING,
+   which genuinely is scene-wide because only TOCK does it and only one at a
+   time. **The balance canary did not move**, which is the evidence the
+   refactor changed the shape and not the behaviour.
 3. ~~**Fix the wonky walk.**~~ Done 2026-08-17, together with the camera move to
    80°. The two were the same job: the walk was wonky *because* it was built for
    a view the game did not have. See "The camera angle" in `ASSETS.md`.

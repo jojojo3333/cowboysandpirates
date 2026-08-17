@@ -44,23 +44,32 @@ func _draw() -> void:
 	_draw_hover()
 	_draw_target()
 	_draw_route()
+	_draw_selection()
 	_draw_crew_state()
+	_draw_drag_box()
 
 
 # The destination compartment, outlined along its real traced shape rather than
 # as a bounding box. An irregular room highlighted with a rectangle is exactly
 # the seam that made the old view look like a form laid over a picture.
 func _draw_target() -> void:
-	if scene.task != RescueScene.Task.TRANSIT or scene.route.is_empty():
-		return
-	var room: ShipRoom = layout.get_room(scene.route[scene.route.size() - 1])
-	if room == null or room.polygon.size() < 3:
-		return
+	# One outline per destination, not per traveller. Five crew ordered to the
+	# same hold is one place to look at, and drawing it five times just makes
+	# the outline brighter for no information.
+	var seen: Dictionary = {}
+	for member: CrewMember in view.all_crew():
+		if member.route.is_empty():
+			continue
+		seen[member.route[member.route.size() - 1]] = true
 
 	var pulse: float = 0.45 + 0.25 * sin(clock * 3.2)
-	draw_colored_polygon(room.polygon, Color(COL_SELECT, 0.10))
-	var loop: PackedVector2Array = room.polygon + PackedVector2Array([room.polygon[0]])
-	draw_polyline(loop, Color(COL_SELECT, pulse), 3.0)
+	for room_id: String in seen:
+		var room: ShipRoom = layout.get_room(room_id)
+		if room == null or room.polygon.size() < 3:
+			continue
+		draw_colored_polygon(room.polygon, Color(COL_SELECT, 0.10))
+		var loop: PackedVector2Array = room.polygon + PackedVector2Array([room.polygon[0]])
+		draw_polyline(loop, Color(COL_SELECT, pulse), 3.0)
 
 
 # What the mouse is over. Nothing on this ship reacted until it was clicked,
@@ -84,11 +93,33 @@ func _draw_hover() -> void:
 
 # The whole ordered route, through the doorways the crew actually walk through.
 func _draw_route() -> void:
-	if scene.task != RescueScene.Task.TRANSIT or scene.tock == null:
+	for member: CrewMember in view.all_crew():
+		if not member.is_moving():
+			continue
+		var points: PackedVector2Array = view.route_points_for(member)
+		for i: int in range(points.size() - 1):
+			_dashed(points[i], points[i + 1])
+
+
+# A ring under everyone currently selected. Under, not over: a marker drawn on
+# top of a figure seen from above covers the helmet, which is the one part of
+# the silhouette that says which way they are facing.
+func _draw_selection() -> void:
+	for member: CrewMember in view.all_crew():
+		if not view.selected.has(member.id):
+			continue
+		var at: Vector2 = view.crew_position(member)
+		draw_arc(at + Vector2(0.0, 6.0), 19.0, 0.0, TAU, 32, Color(COL_SELECT, 0.95), 2.0)
+		draw_arc(at + Vector2(0.0, 6.0), 19.0, 0.0, TAU, 32, Color(COL_SELECT, 0.18), 6.0)
+
+
+# The rubber band, while the button is still down.
+func _draw_drag_box() -> void:
+	if not view.is_dragging():
 		return
-	var points: PackedVector2Array = view.route_points()
-	for i: int in range(points.size() - 1):
-		_dashed(points[i], points[i + 1])
+	var box: Rect2 = view.selection_box()
+	draw_rect(box, Color(COL_SELECT, 0.10), true)
+	draw_rect(box, Color(COL_SELECT, 0.85), false, 2.0)
 
 
 func _dashed(a: Vector2, b: Vector2) -> void:

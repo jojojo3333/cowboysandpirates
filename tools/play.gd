@@ -40,6 +40,7 @@ func _init() -> void:
 	var dump: String = _arg("--dump", "")
 
 	await _check_boot_scene()
+	await _check_selection()
 	var first: Array = await _run(dump)
 	# Same seed, same steps, same answers. If this ever disagrees, something is
 	# reading wall-clock time or an unseeded RNG, and every other check in this
@@ -234,14 +235,14 @@ func _run(dump: String) -> Array:
 	var steps: int = 0
 	var seen_transit: bool = false
 	while probe.snapshot()["phase"] != "RESOLVED" and steps < MAX_STEPS:
-		if scene.task == RescueScene.Task.IDLE:
+		if not scene.is_busy():
 			_play_turn(ship, scene, hold)
 		_step(main, 1)
 		steps += 1
 		var now: Dictionary = probe.snapshot()
 		trace.append(_trace_row(now))
 
-		if str((now["task"] as Dictionary)["name"]) == "TRANSIT":
+		if not probe.movers().is_empty():
 			seen_transit = true
 
 		# Invariants — true at every single step, not just at the end. Checked
@@ -279,6 +280,143 @@ func _run(dump: String) -> Array:
 	main.queue_free()
 	await process_frame
 	return trace
+
+
+# Box-select, then order everyone at once.
+#
+# **In its own scene, deliberately.** Two constraints leave nowhere else to put
+# it. It cannot run after the mission resolves, because a resolved scene refuses
+# every order and the check would fail for the wrong reason. And it must not run
+# *inside* the played mission, because issuing extra orders would change how
+# long the mission takes — the balance canary would move, and it would move
+# because of the test rather than because of the game, which is the one thing
+# that number must never do.
+#
+# So: a third run, played only as far as the first captive being cut loose. That
+# is the earliest moment more than one person can walk — until then TOCK is the
+# entire mobile roster and a multi-crew order is indistinguishable from a single
+# one — and it stops well short of resolution, leaving the scene live.
+func _check_selection() -> void:
+	var packed: PackedScene = load("res://rescue_scene.tscn") as PackedScene
+	if packed == null:
+		return
+	var main: Node = packed.instantiate()
+	root.add_child(main)
+	await process_frame
+	await process_frame
+	main.set_process(false)
+
+	var scene: RescueScene = main.get("scene") as RescueScene
+	var probe: GameProbe = GameProbe.new(main)
+	var ship: ShipView = _find_ship(main)
+	if ship == null:
+		_fail("select-setup", "no ShipView in the scene tree")
+		return
+
+	_press_plan(main, "Fight our way out")
+	_step(main, 1)
+	var hold: String = str(scene.config.get("captives_room", "cargo"))
+
+	# Walk to the hold and cut exactly one person loose, then stop.
+	var steps: int = 0
+	while _commandable(ship).size() < 2 and steps < MAX_STEPS:
+		if not scene.is_busy():
+			_play_turn(ship, scene, hold)
+		_step(main, 1)
+		steps += 1
+	_check("select-setup", _commandable(ship).size() >= 2,
+		"could not get two crew able to take orders; only %s" % [_commandable(ship)])
+	if _commandable(ship).size() < 2:
+		return
+
+	# A box over the whole ship: everyone who can take an order should be in it.
+	var commandable: Array = _commandable(ship)
+
+	_drag(ship, Vector2(-4000.0, -4000.0), Vector2(4000.0, 4000.0))
+	await process_frame
+	var picked: Array = probe.selected()
+	picked.sort()
+	commandable.sort()
+	_check("select-all", picked == commandable,
+		"a box over the whole ship selected %s, expected %s" % [picked, commandable])
+
+	# An empty patch of space selects nobody. This is how a player clears a
+	# selection, so it has to actually clear it rather than leave the old one.
+	_drag(ship, Vector2(-4000.0, -4000.0), Vector2(-3900.0, -3900.0))
+	await process_frame
+	_check("select-none", probe.selected().is_empty(),
+		"a box over empty space left %s selected" % [probe.selected()])
+
+	# And the point of the whole exercise: select everyone, order one room, and
+	# check that more than one person actually sets off.
+	_drag(ship, Vector2(-4000.0, -4000.0), Vector2(4000.0, 4000.0))
+	await process_frame
+	var destination: String = _far_room(scene, ship)
+	_check("select-order-room", destination != "", "found no room to order the squad to")
+	if destination == "":
+		return
+	ship.room_clicked.emit(destination)
+	_step(main, 2)
+
+	var moving: Array = probe.movers()
+	_check("multi-move", moving.size() > 1,
+		"ordered %d selected crew to %s but only %s set off"
+			% [probe.selected().size(), destination, moving])
+	for member: Dictionary in probe.snapshot()["crew"]:
+		if not bool(member["moving"]):
+			continue
+		_check("multi-move-target", str(member["route"][member["route"].size() - 1]) == destination,
+			"%s was ordered to %s but is routed to %s"
+				% [member["name"], destination, member["route"]])
+
+	main.queue_free()
+	await process_frame
+
+
+# Everyone the player could actually give an order to right now.
+func _commandable(ship: ShipView) -> Array:
+	var out: Array = []
+	for member: CrewMember in ship.all_crew():
+		if member.can_take_orders():
+			out.append(member.id)
+	out.sort()
+	return out
+
+
+# A room nobody is currently standing in, with space for the whole squad —
+# ordering people to the room they are already in is correctly refused, which
+# would make the check above pass for the wrong reason.
+func _far_room(scene: RescueScene, ship: ShipView) -> String:
+	var crowd: int = 0
+	for member: CrewMember in ship.all_crew():
+		if member.can_take_orders():
+			crowd += 1
+	for room: ShipRoom in scene.layout.rooms:
+		if not scene.crew_in_room(room.id).is_empty():
+			continue
+		if room.capacity >= crowd:
+			return room.id
+	return ""
+
+
+# Press, move, release, as the mouse would. Coordinates are in plate space and
+# converted back, so a test can say "the whole ship" without knowing the zoom.
+func _drag(ship: ShipView, from_plate: Vector2, to_plate: Vector2) -> void:
+	var press: InputEventMouseButton = InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = ship.to_screen(from_plate)
+	ship._gui_input(press)
+
+	var motion: InputEventMouseMotion = InputEventMouseMotion.new()
+	motion.position = ship.to_screen(to_plate)
+	ship._gui_input(motion)
+
+	var release: InputEventMouseButton = InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = ship.to_screen(to_plate)
+	ship._gui_input(release)
 
 
 # --- driving the game like a player -----------------------------------------

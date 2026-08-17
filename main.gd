@@ -131,6 +131,7 @@ func _build_ui() -> void:
 	_ship.custom_minimum_size = Vector2(640, 300)
 	_ship.room_clicked.connect(_on_room_clicked)
 	_ship.crew_clicked.connect(_on_crew_clicked)
+	_ship.crew_box_selected.connect(_on_crew_box_selected)
 	ship_frame.add_child(_ship)
 
 	# The log used to be a full-height column down the right-hand side. It cost
@@ -257,12 +258,23 @@ func _status_text() -> String:
 	elif scene.phase == RescueScene.Phase.RESOLVED:
 		bits.append("resolved")
 	else:
-		if scene.task == RescueScene.Task.TRANSIT:
-			bits.append("moving %d%%" % int(scene.task_progress() * 100.0))
+		# How many are walking, not whether TOCK is. The status line was written
+		# when one person could move; five crew crossing the ship now report as
+		# five, and the hint changes to name the selection once there is one.
+		var walking: int = 0
+		for m: CrewMember in scene.all_hands():
+			if m.is_moving():
+				walking += 1
+		if walking > 1:
+			bits.append("%d moving" % walking)
+		elif scene.tock != null and scene.tock.is_moving():
+			bits.append("moving %d%%" % int(scene.tock.move_progress() * 100.0))
 		elif scene.task == RescueScene.Task.FREEING:
 			bits.append("cutting %d%%" % int(scene.task_progress() * 100.0))
+		elif not _ship.selected.is_empty():
+			bits.append("%d selected — click a room to send them" % _ship.selected.size())
 		else:
-			bits.append("click a room to move, a captive to cut them loose")
+			bits.append("drag to select, click a room to move, a captive to cut them loose")
 		if scene.hack_active:
 			bits.append("hack %4.1fs" % maxf(scene.hack_remaining, 0.0))
 		if scene.fight_active:
@@ -350,14 +362,36 @@ func _on_plan_pressed(plan_id: String) -> void:
 		scene.choose_plan(plan_id)
 
 
+# A room click is a move order for everyone selected, and for TOCK alone when
+# nothing is. Falling back to TOCK keeps the mission playable without ever
+# touching the mouse-drag — the tutorial should not require a selection before
+# anything can happen.
 func _on_room_clicked(room_id: String) -> void:
-	if scene != null:
+	if scene == null:
+		return
+	if _ship.selected.is_empty():
 		scene.order_move(room_id)
+	else:
+		scene.order_move(room_id, _ship.selected)
 
 
+# Clicking a person means two different things depending on who they are.
+# A tied captive is someone to cut loose; anyone else is someone to select.
 func _on_crew_clicked(crew_id: String) -> void:
-	if scene != null:
+	if scene == null:
+		return
+	var m: CrewMember = scene.get_crew(crew_id)
+	if m != null and m.is_tied():
 		scene.order_free(crew_id)
+		return
+	_ship.selected = [crew_id] if m != null and m.can_take_orders() else ([] as Array[String])
+
+
+func _on_crew_box_selected(crew_ids: Array) -> void:
+	var picked: Array[String] = []
+	for id: Variant in crew_ids:
+		picked.append(str(id))
+	_ship.selected = picked
 
 
 func _on_restart_pressed() -> void:

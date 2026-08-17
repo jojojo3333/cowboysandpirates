@@ -11,7 +11,12 @@ class_name RescueScene
 # this game is meant to be played from the paused state.
 
 enum Phase { PROPOSAL, EXECUTING, RESOLVED }
-enum Task { IDLE, TRANSIT, FREEING }
+
+# TRANSIT is gone: walking is per crew member and lives on CrewMember now, so a
+# scene-wide "the task is transit" cannot express five people going five places.
+# What is left here is the one thing that genuinely is scene-wide, because only
+# TOCK does it and only one at a time — cutting a captive loose.
+enum Task { IDLE, FREEING }
 
 signal phase_changed(phase: int)
 
@@ -31,11 +36,10 @@ var tock: CrewMember = null
 var task: int = Task.IDLE
 var task_remaining: float = 0.0
 
-# How long the task in progress takes in total. Transit is no longer a fixed
-# fee, so progress has to be measured against this rather than a constant.
+# How long the task in progress takes in total. Progress is measured against
+# this rather than a constant.
 var task_total: float = 0.0
 var task_target: String = ""
-var route: Array[String] = []
 
 var hack_active: bool = false
 var hack_remaining: float = 0.0
@@ -124,63 +128,92 @@ func choose_plan(plan_id: String) -> bool:
 	return true
 
 
-# Accepts any reachable room, not only a neighbour, and walks the whole route.
-# Ordering a new destination mid-walk re-routes from the room currently being
-# entered, so the player is never made to wait out a hop they no longer want.
-func order_move(room_id: String) -> bool:
-	if phase != Phase.EXECUTING or tock == null:
-		return false
-	if task == Task.FREEING:
+# Orders crew to a room. Accepts any reachable room, not only a neighbour, and
+# walks the whole route. Ordering a new destination mid-walk re-routes from the
+# room currently being entered, so nobody is made to wait out a hop they no
+# longer want.
+#
+# `ids` empty means TOCK, which keeps every existing caller working unchanged.
+# Returns true if **anybody** accepted: ordering five people into a room with
+# space for three should move the three, not refuse all five.
+func order_move(room_id: String, ids: Array[String] = []) -> bool:
+	if phase != Phase.EXECUTING:
 		return false
 
-	var start: String = task_target if task == Task.TRANSIT else tock.room
+	var movers: Array[CrewMember] = []
+	if ids.is_empty():
+		if tock != null:
+			movers.append(tock)
+	else:
+		for crew_id: String in ids:
+			var m: CrewMember = get_crew(crew_id)
+			if m != null:
+				movers.append(m)
+
+	var any: bool = false
+	for m: CrewMember in movers:
+		if _order_one(m, room_id):
+			any = true
+	return any
+
+
+# One crew member, one destination. Everything that can refuse a move is here.
+func _order_one(m: CrewMember, room_id: String) -> bool:
+	if not m.can_take_orders():
+		return false
+	# TOCK cutting somebody loose is not interruptible by a walk order; the
+	# captive would be left half-freed with no way to express that.
+	if m == tock and task == Task.FREEING:
+		return false
+
+	var start: String = m.move_target if m.is_moving() else m.room
 	if room_id == start:
 		return false
 
 	var route_to: Array[String] = layout.path(start, room_id)
 	if route_to.is_empty():
 		return false
-	if not _room_has_space(room_id):
-		_refuse_move(room_id)
+	# Counted against the destination *including* whoever is already walking
+	# there, so ordering six people into a room for four fills it and turns the
+	# rest away, rather than all six being waved through because the room was
+	# empty at the moment each of them was asked about.
+	if not _room_has_space(room_id, m):
+		_refuse_move(room_id, m)
 		return false
 
-	route = route_to
-	_emit("MOVE_ORDERED", LogEvent.NEUTRAL, [tock.id], {
-		"to": room_id, "hops": route.size(),
-		"seconds": snappedf(_route_seconds(), 0.1),
+	m.route = route_to
+	_emit("MOVE_ORDERED", LogEvent.NEUTRAL, [m.id], {
+		"to": room_id, "hops": m.route.size(),
+		"seconds": snappedf(_route_seconds(m), 0.1),
 	})
-	if task != Task.TRANSIT:
-		_begin_hop()
+	if not m.is_moving():
+		_begin_hop(m)
 	return true
 
 
 # The whole ordered walk, so the log can say how long the trip will take rather
 # than how many rooms it passes. Hop count stopped being a useful number for the
 # player the moment travel started costing distance.
-func _route_seconds() -> float:
+func _route_seconds(m: CrewMember) -> float:
 	var total: float = 0.0
-	var at: String = tock.room
-	for room_id: String in route:
+	var at: String = m.room
+	for room_id: String in m.route:
 		total += transit_seconds(at, room_id)
 		at = room_id
 	return total
 
 
-func _begin_hop() -> void:
-	if route.is_empty():
-		task = Task.IDLE
-		task_target = ""
+func _begin_hop(m: CrewMember) -> void:
+	if m.route.is_empty():
+		m.stop_moving()
 		return
-	if not _room_has_space(route[0]):
-		_refuse_move(route[0])
-		route.clear()
-		task = Task.IDLE
-		task_target = ""
+	if not _room_has_space(m.route[0], m):
+		_refuse_move(m.route[0], m)
+		m.stop_moving()
 		return
-	task = Task.TRANSIT
-	task_target = route[0]
-	task_total = transit_seconds(tock.room, task_target)
-	task_remaining = task_total
+	m.move_target = m.route[0]
+	m.move_total = transit_seconds(m.room, m.move_target)
+	m.move_remaining = m.move_total
 
 
 # How long it takes to walk from one compartment to the next. Distance divided
@@ -205,19 +238,28 @@ func transit_seconds(from_id: String, to_id: String) -> float:
 # in the room he is leaving, and counting him there would let him walk into a
 # room that is one over its limit while blocking him from one that is exactly
 # full.
-func _room_has_space(room_id: String) -> bool:
+# Whether `mover` can fit in `room_id`.
+#
+# Counts everyone standing in the room plus everyone walking into it, minus the
+# mover themselves — someone already heading there is not competing with
+# themselves for a place. Committed occupancy rather than current occupancy is
+# what makes ordering a squad behave: without it, five people asked one after
+# another all see the same empty room and all set off for it.
+func _room_has_space(room_id: String, mover: CrewMember = null) -> bool:
 	var occupants: int = 0
-	for m: CrewMember in crew_in_room(room_id):
-		if m != tock:
+	for m: CrewMember in all_hands():
+		if m == mover:
+			continue
+		if m.room == room_id or m.move_target == room_id:
 			occupants += 1
 	return layout.has_space(room_id, occupants)
 
 
 # Refusals are stated in the log, not left to be inferred from a click that did
 # nothing. CLAUDE.md: if it matters, it writes a log line.
-func _refuse_move(room_id: String) -> void:
+func _refuse_move(room_id: String, m: CrewMember) -> void:
 	var room: ShipRoom = layout.get_room(room_id)
-	_emit("MOVE_REFUSED", LogEvent.WARNING, [tock.id], {
+	_emit("MOVE_REFUSED", LogEvent.WARNING, [m.id], {
 		"room": room_id,
 		"reason": "full",
 		"capacity": room.capacity if room != null else 0,
@@ -227,7 +269,7 @@ func _refuse_move(room_id: String) -> void:
 func order_free(crew_id: String) -> bool:
 	if phase != Phase.EXECUTING or task != Task.IDLE or tock == null:
 		return false
-	if not route.is_empty():
+	if tock.is_moving():
 		return false
 	var m: CrewMember = get_crew(crew_id)
 	if m == null or not m.is_tied():
@@ -262,6 +304,7 @@ func tick(delta: float) -> void:
 	time += dt
 	_tick_hack(dt)
 	_tick_fight(dt)
+	_tick_movement(dt)
 	_tick_task(dt)
 	_check_resolved()
 
@@ -321,6 +364,27 @@ func _tick_fight(dt: float) -> void:
 	_say("fight_done")
 
 
+# Everyone walking advances, independently, in the same tick.
+#
+# Iterated over a snapshot of the roster because arriving can free somebody,
+# which appends to `crew`, and mutating a list mid-loop is the kind of bug that
+# shows up as one crew member silently skipping a hop.
+func _tick_movement(dt: float) -> void:
+	for m: CrewMember in all_hands():
+		if not m.is_moving():
+			continue
+		m.move_remaining -= dt
+		if m.move_remaining > 0.0:
+			continue
+		m.room = m.move_target
+		_emit("ARRIVED", LogEvent.NEUTRAL, [m.id], {"room": m.room})
+		if not m.route.is_empty():
+			m.route.pop_front()
+		_begin_hop(m)
+		if m == tock:
+			_on_arrived()
+
+
 func _tick_task(dt: float) -> void:
 	if task == Task.IDLE:
 		return
@@ -328,14 +392,7 @@ func _tick_task(dt: float) -> void:
 	if task_remaining > 0.0:
 		return
 
-	if task == Task.TRANSIT:
-		tock.room = task_target
-		_emit("ARRIVED", LogEvent.NEUTRAL, [tock.id], {"room": task_target})
-		if not route.is_empty():
-			route.pop_front()
-		_begin_hop()
-		_on_arrived()
-	elif task == Task.FREEING:
+	if task == Task.FREEING:
 		var m: CrewMember = get_crew(task_target)
 		var freed_id: String = task_target
 		task = Task.IDLE
@@ -370,8 +427,13 @@ func _on_freed(_freed_id: String) -> void:
 		_say("all_free_fight")
 
 
+# Resolved means nothing is still in flight. Movement left the task system, so
+# "task is idle" stopped being the whole answer — a scene that resolved while
+# somebody was still walking would cut the mission off mid-stride.
 func _check_resolved() -> void:
 	if tied_count() > 0 or hack_active or fight_active or task != Task.IDLE:
+		return
+	if anyone_moving():
 		return
 	phase = Phase.RESOLVED
 	phase_changed.emit(phase)
@@ -400,6 +462,32 @@ func tied_count() -> int:
 		if m.is_tied():
 			n += 1
 	return n
+
+
+# Everyone aboard, TOCK included. `crew` deliberately holds only the captives,
+# so anything that means "every person on this ship" has to say so.
+func all_hands() -> Array[CrewMember]:
+	var out: Array[CrewMember] = []
+	if tock != null:
+		out.append(tock)
+	out.append_array(crew)
+	return out
+
+
+# True while TOCK has something in hand — walking or cutting someone loose.
+# This is what "can I give the next order yet?" means, and it is the question
+# both harnesses ask.
+func is_busy() -> bool:
+	if task != Task.IDLE:
+		return true
+	return tock != null and tock.is_moving()
+
+
+func anyone_moving() -> bool:
+	for m: CrewMember in all_hands():
+		if m.is_moving():
+			return true
+	return false
 
 
 func crew_in_room(room_id: String) -> Array[CrewMember]:
