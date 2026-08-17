@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # The two verify commands required by GAME_SPEC_v0.2 §10.1.
 #
+#   tools/verify.sh rules    the house rules, as checks instead of prose
 #   tools/verify.sh static   project parses and imports; data contracts hold
-#   tools/verify.sh sim      headless test suite + 500-run balance report
-#   tools/verify.sh          both
+#   tools/verify.sh sim      headless test suite + balance report
+#   tools/verify.sh          all three
 #
 # A change is not done until both are green. Do not weaken a check to make it
 # pass — see CLAUDE.md.
@@ -36,6 +37,21 @@ hdr() { printf '\n\033[1m== %s\033[0m\n' "$1"; }
 ok()  { printf '\033[32mPASS\033[0m %s\n' "$1"; }
 bad() { printf '\033[31mFAIL\033[0m %s\n' "$1"; FAILED=1; }
 skip(){ printf '\033[33mSKIP\033[0m %s\n' "$1"; }
+
+verify_rules() {
+  hdr "rules"
+
+  # The rules in CLAUDE.md, ARCHITECTURE.md and ASSETS.md, made executable. A
+  # rule in a document is something a reader might remember; a rule in a check
+  # is something that stops them. Every check here exists because the rule it
+  # encodes was broken at least once despite being written down.
+  local out
+  out="$(python3 "$REPO_ROOT/tools/check_rules.py" 2>&1)"
+  local rc=$?
+  echo "$out"
+  if [[ $rc -eq 0 ]]; then ok "house rules"; else bad "house rules"; fi
+}
+
 
 verify_static() {
   hdr "static"
@@ -92,10 +108,11 @@ verify_sim() {
 }
 
 case "${1:-all}" in
+  rules)  verify_rules ;;
   static) verify_static ;;
   sim)    verify_sim ;;
-  all)    verify_static; verify_sim ;;
-  *)      echo "usage: tools/verify.sh [static|sim]" >&2; exit 2 ;;
+  all)    verify_rules; verify_static; verify_sim ;;
+  *)      echo "usage: tools/verify.sh [rules|static|sim]" >&2; exit 2 ;;
 esac
 
 echo

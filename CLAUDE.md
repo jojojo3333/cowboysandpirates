@@ -125,10 +125,22 @@ project can go wrong.
 ## Verify after every change — run these yourself, do not ask
 
 ```
+tools/verify.sh rules      # the house rules, as checks instead of prose
 tools/verify.sh static     # parses, imports, and validates data
 tools/verify.sh sim        # headless test suite + balance report
-tools/verify.sh            # both
+tools/verify.sh            # all three
 ```
+
+**`rules` exists because this document does not work on its own.** Everything it
+checks was already written down here, and several were broken anyway — a rule in
+a document is something a reader might remember, and a rule in a check is
+something that stops them. It caught three latent instances of the
+invisible-Control bug in `main.gd` the first time it ran.
+
+**When a rule is agreed, add it to `tools/check_rules.py` in the same breath as
+writing it down.** A rule that exists only as prose will be followed until it is
+inconvenient. If a check turns out to be wrong, argue with it and change it — do
+not weaken it to get a green.
 
 These are the two commands `GAME_SPEC v0.2 §10.1` requires to be green. Under
 the hood `static` is the `godot --headless --quit` boot check plus the data
