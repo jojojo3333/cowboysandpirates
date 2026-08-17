@@ -11,6 +11,7 @@ broken, and it doubles as the brief pack for work done outside this repo.
 | **What is next?** | **this file** |
 | What is the build order, and what is done? | `SLICE.md` |
 | What are the rules of the game? | `GAME_SPEC.md` |
+| What does mission 1 consist of, and what does it need? | `MISSION_01.md` |
 | How do `sim/` and `ui/` divide? | `ARCHITECTURE.md` |
 | Where did an asset come from, and what does a new one need? | `ASSETS.md` |
 | What is the world, who is in it? | `SETTING.md`, `world/` |
@@ -75,7 +76,31 @@ tools/verify.sh            # rules, static, sim — all three
    it means re-running `--mode bake` and pasting the `CREW_ART_OFFSET` it
    prints into `ui/ship_view.gd`.
 
-### Next after crew selection: make the enemy ship look alive
+### Mission 1 — the boarding
+
+**`MISSION_01.md` is the breakdown**: the beats, everything each one requires,
+what already exists, and what to cut first if time runs short. It is a
+specification, not a queue — the order of work stays here.
+
+The short version. Act 1 is the demo target: a voiced cold open, an in-engine
+cutscene of the boarding, then the playable rescue as it stands, with four
+boarders who all drop at once when TOCK hacks them, and a line of banter per
+crew member. Act 2 — the ship fight — is recorded in that file and scheduled
+nowhere.
+
+**The two biggest new things are a dialogue-sequence system and boarders that
+actually exist as actors.** Boarders are currently an integer that a countdown
+decrements; nothing stands anywhere and nothing is drawn.
+
+**Waiting on the owner:** the script and the voice files. Nothing in act 1's
+dialogue can be finished without them, though the system that plays them can be
+built and tested against placeholder text first.
+
+**One thing to expect:** changing the hack from 18 staggered seconds to 3
+simultaneous ones **will move the balance canary off 40.3s**. That is a content
+change and correct. Report the new number; do not tune it back.
+
+### Next after mission 1: make the enemy ship look alive
 
 The owner's read, and it is the right one — **a hostile ship with three figures
 standing perfectly still is scenery, not a threat.** People moving between
