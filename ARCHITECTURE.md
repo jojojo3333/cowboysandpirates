@@ -166,6 +166,26 @@ Known-but-unimplemented is a warning; malformed is a failure.
 
 ---
 
+## 5a. Two scenes, and which one boots
+
+Since 2026-08-17 there are two launchable scenes, and the split matters:
+
+| Scene | Script | What it is |
+|---|---|---|
+| `main.tscn` | `ui/combat_preview.gd` | **The boot scene.** A composition test for the ship-to-ship combat screen: two plates at equal scale, ours left, theirs right, minimal HUD. It contains no combat rules. |
+| `rescue_scene.tscn` | `main.gd` | The playable cargo-hold mission. What `verify.sh play`, `screenshot.gd` and `walk_frames.gd` all drive. |
+
+The one-scene rule below is superseded to exactly this extent and no further:
+**two scenes, one of which is a visual test bench.** It is not licence for a
+scene per screen.
+
+**This split has a sharp edge, and it drew blood immediately.** Every existing
+check pointed at the mission scene, so when the boot scene stopped compiling,
+all of them stayed green and the project would not open. `verify.sh static` was
+the only thing that caught it, because it inspects the whole import rather than
+one scene. `play.gd` now also instantiates the boot scene and checks it builds
+something — see 5b for what that does and does not cover.
+
 ## 5b. The truth layer — `tools/game_probe.gd`
 
 **Ask the running game what is true. Do not infer it from pixels.**

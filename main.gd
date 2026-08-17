@@ -1,8 +1,8 @@
 extends Control
 
-# The only script attached to the only scene. Every Control below is built in
-# GDScript at runtime, because the layout is generated from data. No .tscn is
-# hand-edited beyond main.tscn itself.
+# The rescue mission screen. It is kept as a separate scene so the launch scene
+# can be a two-ship combat-layout preview while this playable mission remains
+# available to automated checks and to run directly from the Godot editor.
 #
 # This holds no authoritative state: everything it draws it reads from `scene`,
 # and every click it turns into a call back into the simulation. The ship

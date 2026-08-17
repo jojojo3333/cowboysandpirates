@@ -88,6 +88,16 @@ var _fit_scale: float = 1.0
 var _hover_room: String = ""
 var _hover_crew: String = ""
 
+# Combat shows two ships from the same distance. The enemy plate is mirrored so
+# the bows face each other, while every room, crew position and click still uses
+# the authored plate coordinates.
+var mirrored: bool = false
+
+# A combat composition may deliberately show only the useful centre of a ship.
+# Raising this above 1.0 enlarges the plate within its clipped viewport, cutting
+# peripheral hull / engine detail rather than shrinking crew and room state.
+var display_scale_multiplier: float = 1.0
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -227,9 +237,12 @@ func _fit() -> void:
 	var plate: Vector2 = layout.plate_size
 	var by_width: float = size.x / plate.x
 	var by_height: float = size.y / plate.y
-	_fit_scale = minf(by_width, by_height * OVERFLOW)
-	_world.scale = Vector2(_fit_scale, _fit_scale)
+	_fit_scale = minf(by_width, by_height * OVERFLOW) * display_scale_multiplier
+	var horizontal_scale: float = -_fit_scale if mirrored else _fit_scale
+	_world.scale = Vector2(horizontal_scale, _fit_scale)
 	_world.position = ((size - plate * _fit_scale) * 0.5).floor()
+	if mirrored:
+		_world.position.x += plate.x * _fit_scale
 
 
 func to_plate(local: Vector2) -> Vector2:

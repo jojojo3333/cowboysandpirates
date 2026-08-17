@@ -2,7 +2,7 @@
 
 Provenance record for every imported file.
 
-**Currently: one ship plate plus its derived normal map.** The hull, the
+**Currently: a player plate with its derived normal map, and an enemy plate.** The hull, the
 compartment floors, the bulkheads and the doors are all art. `ui/ship_view.gd`
 draws none of them; it builds the scene graph and lights it. `ui/ship_overlay.gd`
 draws state only.
@@ -36,6 +36,7 @@ because collections drift.
 |------|--------|---------|---------|----------|
 | `assets/ship/hull_plate.png` | Supplied by the project owner as `playerwarship1.png`. **Origin not stated.** 1797x875. | Owner-supplied | 2026-08-16 | The player ship: hull, compartments, corridors |
 | `assets/ship/hull_plate_normal.png` | Derived from the plate by `tools/make_normal_map.py` | follows the plate | 2026-08-16 | 2D lighting relief |
+| `assets/ship/enemywarship1.png` | Supplied by the project owner as `enemywarship1.png`. **Origin not stated — see below.** 1712x919. | Owner-supplied, licence unknown | 2026-08-17 | The enemy ship in the combat-preview scene |
 | `assets/crew/soldier_*.png` (3 sheets) | Baked by `tools/render_soldier.gd` from the Silver Soldier | follows the model | 2026-08-16 | Crew sprite sheets: walk, idle, die x 8 facings |
 | `tools/crew_src/silver_soldier_animated.glb` | Sketchfab *Silver Soldier (Animated)* by **Jungle Jim** | **CC-BY 4.0** | 2026-08-16 | The only crew model. Bake source, **excluded from the web export** |
 
@@ -46,8 +47,23 @@ if either had come from a book, a marketplace or a VTT pack the licence would
 have had to permit redistribution. The project owner has confirmed both were
 generated. Nothing here is third-party artwork.
 
+**The enemy plate's origin is not stated, and it is committed anyway.** That is a
+knowing exception, recorded rather than quietly allowed: it arrived on 2026-08-17
+with a UI pass and is needed for the combat-preview composition. The question is
+open and belongs to the owner — **was `enemywarship1.png` generated, commissioned,
+or obtained from somewhere?** If it came from somewhere with terms, this
+repository is public and publishes to GitHub Pages, so committing it is
+publishing it, and the answer changes whether it can stay.
+
 Ask the same question of the next plate. It is cheap to answer at the moment an
 image arrives and expensive to reconstruct later.
+
+**A note on how this one got in.** `tools/verify.sh rules` did not object, and it
+should have. The provenance check accepted a file if *its folder* was mentioned
+anywhere in this document — so once `assets/ship` appeared, anything dropped
+beside the existing plates counted as recorded. It now matches on filename, with
+globs in this table (`assets/crew/soldier_*.png`) honoured as globs. A rule with
+a hole that size is worth roughly nothing, which is the general lesson.
 
 **It is under the resolution minimum.** The spec below asks for 2048 px on the
 long axis and this plate is 1797. Nothing is broken by that — the ship still

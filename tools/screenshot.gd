@@ -1,6 +1,6 @@
 extends SceneTree
 #
-# Renders main.tscn offscreen and writes PNGs. Needs a display, so under CI:
+# Renders the rescue mission offscreen and writes PNGs. Needs a display, so under CI:
 #
 #   xvfb-run -a godot --script res://tools/screenshot.gd -- --out /tmp/shot
 #
@@ -17,9 +17,9 @@ const SETTLE_FRAMES: int = 12
 func _init() -> void:
 	var out_prefix: String = _arg_str("--out", "/tmp/deadweight")
 
-	var packed: PackedScene = load("res://main.tscn") as PackedScene
+	var packed: PackedScene = load("res://rescue_scene.tscn") as PackedScene
 	if packed == null:
-		printerr("could not load res://main.tscn")
+		printerr("could not load res://rescue_scene.tscn")
 		quit(1)
 		return
 

@@ -39,6 +39,7 @@ var _checks: int = 0
 func _init() -> void:
 	var dump: String = _arg("--dump", "")
 
+	await _check_boot_scene()
 	var first: Array = await _run(dump)
 	# Same seed, same steps, same answers. If this ever disagrees, something is
 	# reading wall-clock time or an unseeded RNG, and every other check in this
@@ -62,12 +63,71 @@ func _init() -> void:
 	quit(1)
 
 
+# The scene the game actually starts in, which is not the one played below.
+#
+# `main.tscn` is the combat-preview composition; the rescue mission lives in
+# `rescue_scene.tscn` and is what everything else here drives. Nothing looked at
+# the boot scene at all until a UI pass arrived with a helper named
+# `draw_ellipse`, colliding with CanvasItem's own method of that name in Godot
+# 4.7 — a hard parse error that stopped the whole project loading.
+#
+# **`verify.sh static` catches that one, and this does not.** Measured, not
+# assumed: reintroduced deliberately, `static` goes red on the parse error while
+# this check stays green, because Godot serves `main.tscn` from its compiled
+# cache and hands back a scene that instantiates perfectly well. Compile errors
+# belong to `static`; do not expect a second catch here.
+#
+# What this does cover is the failure `static` cannot see: a boot scene that
+# compiles, loads, and then builds nothing — no script attached, no children, or
+# Controls that collapse. That is a live risk now the launch scene is a
+# composition assembled entirely in `_ready()`.
+func _check_boot_scene() -> void:
+	var boot_path: String = str(
+		ProjectSettings.get_setting("application/run/main_scene", "res://main.tscn")
+	)
+	var packed: PackedScene = load(boot_path) as PackedScene
+	_check("boot-scene-loads", packed != null, "could not load the boot scene %s" % boot_path)
+	if packed == null:
+		return
+
+	var node: Node = packed.instantiate()
+	root.add_child(node)
+	for i: int in range(4):
+		await process_frame
+
+	# `load()` succeeding is not the same as the scene working, and this is the
+	# distinction the first version of this check missed. When the attached
+	# script fails to compile, Godot still hands back a perfectly good
+	# PackedScene — the .tscn parses, it is only the script resource that died —
+	# so it instantiates into a bare, scriptless Control with no children. Every
+	# layout assertion then passes triumphantly on an empty node.
+	#
+	# A scene whose script did not load has no script and builds nothing. Both
+	# are worth asserting, because they fail in that order.
+	_check("boot-scene-script", node.get_script() != null,
+		"%s instantiated with no script attached; its script failed to compile" % boot_path)
+	_check("boot-scene-built", node.get_child_count() > 0,
+		"%s built no UI at all — _ready() did not run or did nothing" % boot_path)
+
+	var probe: GameProbe = GameProbe.new(node)
+	if probe.layout_is_trustworthy():
+		var collapsed: Array = probe.zero_sized_controls()
+		_check("boot-scene-layout", collapsed.is_empty(),
+			"%s has visible Controls of zero size: %s"
+				% [boot_path, ", ".join(PackedStringArray(collapsed))])
+	else:
+		_skipped.append("boot-scene-layout — needs a display; run under xvfb-run")
+
+	node.queue_free()
+	await process_frame
+
+
 # One scripted playthrough. Returns the state trace, so two of them can be
 # compared for determinism.
 func _run(dump: String) -> Array:
-	var packed: PackedScene = load("res://main.tscn") as PackedScene
+	var packed: PackedScene = load("res://rescue_scene.tscn") as PackedScene
 	if packed == null:
-		_fail("boot", "could not load res://main.tscn")
+		_fail("boot", "could not load res://rescue_scene.tscn")
 		return []
 	var main: Node = packed.instantiate()
 	root.add_child(main)

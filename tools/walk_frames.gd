@@ -25,9 +25,9 @@ func _init() -> void:
 	var destination: String = _arg_str("--to", "cargo")
 	var max_seconds: float = float(_arg_str("--seconds", "40"))
 
-	var packed: PackedScene = load("res://main.tscn") as PackedScene
+	var packed: PackedScene = load("res://rescue_scene.tscn") as PackedScene
 	if packed == null:
-		printerr("could not load res://main.tscn")
+		printerr("could not load res://rescue_scene.tscn")
 		quit(1)
 		return
 

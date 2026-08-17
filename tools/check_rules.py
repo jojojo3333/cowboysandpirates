@@ -15,6 +15,7 @@ argue with it and change it — do not weaken it to get a green.
 from __future__ import annotations
 
 import re
+from fnmatch import fnmatch
 import sys
 from pathlib import Path
 
@@ -251,13 +252,24 @@ def rule_assets_are_recorded() -> None:
         fail("asset-provenance", "ASSETS.md is missing")
         return
     text = doc.read_text(encoding="utf-8", errors="replace")
+    # Matched on the file, never on its folder. This used to accept `folder in
+    # text`, which meant that once `assets/ship` was mentioned anywhere, every
+    # future file dropped into it counted as recorded — and an enemy ship plate
+    # duly arrived with no stated origin and passed. This repository is public,
+    # so committing art is publishing it; a check that waves through anything
+    # in a known folder is not doing that job.
+    globs = [g for g in re.findall(r"`([^`]*\*[^`]*)`", text) if "/" in g or "." in g]
     for path in sorted((ROOT / "assets").rglob("*")):
         if not path.is_file() or path.suffix.lower() not in ASSET_SUFFIXES:
             continue
         name = path.name
         stem = re.sub(r"[_-]?\d+$", "", path.stem)
-        folder = str(path.parent.relative_to(ROOT))
-        if name in text or stem in text or folder in text:
+        if name in text or stem in text:
+            continue
+        # A row may cover a family with a glob — `assets/crew/soldier_*.png`
+        # stands for three sheets — so patterns in the document are matched
+        # against the real path as patterns.
+        if any(fnmatch(rel(path), pat) or fnmatch(name, pat) for pat in globs):
             continue
         fail("asset-provenance",
              f"{rel(path)} is committed but not recorded in ASSETS.md")
