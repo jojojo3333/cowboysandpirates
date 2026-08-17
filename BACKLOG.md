@@ -32,15 +32,32 @@ behind.
 
 ---
 
-## Status, 2026-08-16
+## START HERE — status, 2026-08-17
 
-Slice 0 (the cargo hold rescue) plays start to finish. Three render passes done,
-the ship replaced, corridors traced, travel costing distance. Both verify
-commands green, balance report **40.3s** for both plans.
+Slice 0 plays start to finish. The ship is a traced thirteen-compartment plate
+with a corridor graph; crew walk the corridors and travel costs distance. Crew
+are the Silver Soldier with a walk authored on his own rig, tinted per class.
+All three verify commands green, balance canary **40.3s**.
 
-**Current slice: 1** — the boarders' ship attacks. Not started.
+```
+tools/verify.sh            # rules, static, sim — all three
+```
 
----
+**The first three things next session, in order:**
+
+1. **Verify the Beckett / Ziva claims.** Checklist at the end of
+   `world/research/2026-08-17-beckett-ziva-agent-loop.md`. Ten minutes, and the
+   answer reorders the queue — if Beckett's free edition can screenshot and read
+   the remote scene tree, most of item 2 is bought rather than built.
+2. **Item 1a**, crew selection and multi-crew orders. Everything is blocked on it.
+3. **Fix the wonky walk.** The cause is known and written down: the stride was
+   tuned side-on at 18 degrees and the game views crew from 62, where leg swing
+   is foreshortened to almost nothing. Constants at the top of
+   `tools/render_soldier.gd`; preview with `--mode preview`, then `--mode bake`.
+
+**Owner is providing:** reference images for the UI look. Nothing UI-shaped
+should be built before those arrive — there is no UI art in the project at all
+now, deliberately.
 
 ## Things that have already cost time
 
@@ -77,6 +94,14 @@ Carried forward so they are not rediscovered. Every one of these was paid for.
   requirement before estimating.**
 - The owner is not a programmer. Explain in outcomes, not in diffs.
 
+**Most of the list above is now enforced rather than remembered.**
+`tools/check_rules.py` turns them into checks that run as `tools/verify.sh
+rules`. That file exists because the owner noticed that roughly every third
+exchange contained "you are right, and it was already in our documents". A rule
+in a document is something a reader might remember; a rule in a check is
+something that stops them. **Add a check in the same breath as agreeing a
+rule.**
+
 ## What the balance number is, and is not
 
 You will see **40.3s** quoted everywhere. It has been reported at you like a
@@ -110,6 +135,14 @@ either: leaving the game unpaused while you make coffee produced lines like
 ## The queue
 
 Ordered. Anything marked **[OUTSOURCEABLE]** has a brief further down.
+
+### 0. Verify the agent-loop tools — *ten minutes, reorders everything below*
+
+`world/research/2026-08-17-beckett-ziva-agent-loop.md` claims two Godot plugins
+let an agent run the game, read the live scene tree, screenshot it, inject input
+and assert on the result. If true, that is most of item 2 off the shelf.
+**Unverified — this container cannot reach GitHub's web UI or the Asset
+Library.** Three asset descriptions were wrong this week; check before building.
 
 ### 1. Crew selection and multi-crew movement — *blocking, small, not started*
 

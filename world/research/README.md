@@ -14,4 +14,5 @@ nobody acted on is just a file.
 | Report | Taken from it |
 |---|---|
 | `2026-08-17-machine-checkable-visuals.odt` | The three-layer visual test plan. Queued in `BACKLOG.md` as item 2. |
-| `2026-08-17-ai-assisted-godot-games.odt` | The "four generations" framing, and the closed-loop argument behind item 2. Named tools are unverified — see the note in the backlog. |
+| `2026-08-17-ai-assisted-godot-games.odt` | The "four generations" framing, and the closed-loop argument behind item 2. Named tools unverified. |
+| `2026-08-17-beckett-ziva-agent-loop.md` | Item 0 in `BACKLOG.md`. **Claims, not facts** — carries its own verification checklist. |
