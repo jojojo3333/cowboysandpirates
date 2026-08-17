@@ -140,6 +140,13 @@ presses the real buttons, steps the clock by hand at a fixed 1/30 s, and asserts
 through `tools/game_probe.gd`. `ARCHITECTURE.md 5b` explains the split; the short
 version is **ask the running game what is true, do not infer it from pixels**.
 
+**Mutation testing**, since the word appears throughout this project and is not
+obvious: deliberately break the code, run the check, and confirm it goes red.
+The broken version is the "mutation". If the check stays green, the check was
+decoration. Put the code back afterwards — `cp file /tmp/bak` before, restore
+after, and **re-import between the edit and the test**, or Godot serves the old
+compiled version and the whole exercise tests nothing.
+
 **A check that cannot fail is worth nothing.** Every assertion in `play.gd` and
 every rule in `check_rules.py` was run against a deliberately broken build before
 being kept. This is not ceremony: two of the first three attempts silently passed

@@ -33,21 +33,88 @@ behind.
 
 ---
 
-## START HERE — status, 2026-08-17
+## START HERE — handover, end of 2026-08-17
 
-The cargo-hold mission plays start to finish. The ship is a traced
-thirteen-compartment plate with a corridor graph; crew walk the corridors in
-single file and travel costs distance. Crew can be box-selected and ordered as
-a squad. Four pirates are aboard as real actors, and a scripted cutscene walks
-them from the airlock to the crew quarters with nobody touching the mouse.
+**Read `README.md` first if you are new.** It says which four files are the
+owner's and which five are the builder's, and you do not need to read across
+that line.
 
-**All four verify commands green, balance canary 40.3s, 117 play checks.**
+### Where the game is
+
+Three things are launchable from the boot menu (`main.tscn`):
+
+| Menu entry | What it is |
+|---|---|
+| **SHIP TO SHIP** | Two ships facing each other, HUD, no combat rules. Composition test. |
+| **THE BOARDING** | Cold open over the comms → four pirates board and cross the ship on a script → the crew react in speech bubbles. All placeholder text. |
+| **THE CARGO HOLD** | The playable mission. Box-select crew, order them as a squad, cut captives loose. |
+
+**All four verify commands green. Balance canary 40.3s. 170 play checks.**
 
 ```
-tools/verify.sh            # rules, static, sim, play
+tools/setup_godot.sh                                  # once
+tools/verify.sh                                       # rules, static, sim, play
+.godot-bin/Godot_v4.7-stable_linux.x86_64 --path .    # play it
 ```
 
-`SYSTEMS.md` is the inventory of what exists. This file decides what is next.
+`SYSTEMS.md` is the inventory of what exists, what half exists, and what is
+known missing. This file decides what happens next.
+
+### The owner is testing these three tomorrow morning
+
+Built today, not yet seen by a human on real hardware. **Expect feedback on
+them before starting anything new.**
+
+1. **Two or more crew walking in single file** through the corridors rather than
+   merging into one figure.
+2. **The boot menu** and its three jump-in points.
+3. **Speech bubbles and the boarding pirates.**
+
+### What to do next, in order
+
+1. **Whatever the owner says after testing.** Their feedback outranks this list.
+2. **The smallest real piece of enemy behaviour: pirates that choose their own
+   destination and keep moving.** No fighting, no stations — actors deciding
+   where to go instead of being told. That is the goal-and-decision-tick half,
+   it is genuinely unblocked, and it makes the ship feel occupied.
+   **Read `SYSTEMS.md` §3 "Enemy behaviour is an orchestra" before starting** —
+   three of the six pieces that sentence implies do not exist at all, and
+   building the wrong one produces a pirate who walks to a room and stands there,
+   which reads as a bug rather than a placeholder.
+3. **Audio playback for dialogue**, when the owner's voice files arrive. The
+   dialogue system already treats the written duration as authoritative, so a
+   missing file must degrade to text and never break the build.
+
+### What is waiting on the owner
+
+- **The script** for act 1 and one banter line per crew member.
+- **Voice files** from ElevenLabs, `.ogg` preferred, one per line id.
+- **Who the crew are** — `world/crew/` is still empty, and six banter lines only
+  work if they sound like six different people.
+- **The ship has no name.** The combat HUD says `OUR SHIP` as a deliberate
+  placeholder. Naming it is content and belongs in `world/`.
+- **Is 80° the right camera pitch?** It is a taste call, one constant, and a
+  re-bake. Comparison renders were sent.
+
+### Three things that will bite whoever picks this up
+
+- **`--import` between editing a `.gd` file and testing it**, or Godot serves
+  the old compiled version and a mutation test reports green against genuinely
+  broken code. This happened twice today.
+- **A GDScript runtime error does not fail anything by itself.** It prints and
+  carries on, exit code 0. `verify.sh play` greps its own output for that
+  reason.
+- **Headless Godot lays the root Control out against a 64x64 stand-in window.**
+  Layout assertions are meaningless there, which is why `play.gd` reports them
+  as skipped rather than green when it cannot trust them, and why `verify.sh`
+  runs it under `xvfb-run`.
+
+### The one habit worth keeping
+
+**Break it on purpose before believing it.** Every check in this project was run
+against a deliberately broken build before being kept, and several of the first
+attempts passed on genuinely broken code. `CLAUDE.md` has the method under
+"Mutation testing".
 
 **Done since, in order:**
 
