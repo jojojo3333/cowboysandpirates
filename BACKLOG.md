@@ -125,41 +125,62 @@ assuming TOCK, and the existing room-capacity rule applying to whoever walks.
 Roughly: click a crew member to select, click a room to send them, click empty
 space to deselect. Shift-click or drag-select for several is a later question.
 
-### 2. Slice 1 — the boarders' ship attacks
+### 2. A visual test harness — *new, and it changes how everything else goes*
+
+The simulation has an automatic answer to "did I break it". Art has none, which
+is why every visual change costs a human looking at it, and why two days went on
+crew sprites. The research in `world/research/` lays out three layers; the
+middle one is the surprise and the reason this is worth building:
+
+- **Golden-frame comparison** with SSIM and a tolerance, not pixel equality.
+- **Silhouette and contact-point contracts.** Give each entity an expected
+  bounding box, centroid and ground point, render a flat debug pass, and assert
+  against it. This catches the class of bug where *the art looks fine but the
+  position is wrong* — and it would have caught the HUD collapse instantly:
+  expected 1920x1080, actual 845x568.
+- **A contact sheet.** Not a test — the human review interface for the tests.
+
+Build it small and project-owned rather than adopting a framework. It slots into
+`tools/verify.sh` as a third command alongside `static` and `sim`.
+
+### 3. Slice 1 — the pirates open fire (phase B)
 
 Defined in `SLICE.md`. The first real combat. Do not start it before crew
 movement exists.
 
-### 3. The six visible boarders — *unblocked by room capacity, needs #1*
+### 4. The six visible boarders — *unblocked by room capacity, needs #1*
 
 Three in the cockpit, three in crew quarters. Cockpit holds 4, crew quarters
 holds 6, so both fit with room to send people in after them. Needs enemy crew as
 a concept in `sim/`, which does not exist yet.
 
-### 4. Crew art replacement — **[OUTSOURCEABLE]**
+Note the enemy ship's interior is deliberately **not** drawn — you cannot see
+inside a ship you have not boarded. Only its hull.
+
+### 5. Crew art replacement — **[OUTSOURCEABLE]**
 
 The Kenney crew read as too cartoonish. Two candidate packs assessed and both
 fall short — `ASSETS.md` has the measurements. See **Brief A**.
 
-### 5. UI chrome — **[OUTSOURCEABLE]**
+### 6. UI chrome — **[OUTSOURCEABLE]**
 
 Still the largest visual gap. Kenney's *Fantasy UI Borders* 9-slices are already
 in `assets/ui/` and still unwired. Wants a design pass against the owner's
 mock-up before any code. See **Brief C**.
 
-### 6. Mission and event content — **[OUTSOURCEABLE]**
+### 7. Mission and event content — **[OUTSOURCEABLE]**
 
 `world/` has five empty folders — `crew`, `gameworld`, `missions`, `storyboard`,
 `voice`. `VOICE_AND_EVENTS.md` is the spec and only §6 is built. This is the
 largest body of work that needs no code at all. See **Brief B**.
 
-### 7. Weapon mount overlays
+### 8. Weapon mount overlays
 
 Small transparent PNGs at traced hull coordinates, the way FTL draws upgrades.
 The plate has six turret barbettes, three top and three bottom, which are the
 obvious mount points. No art exists.
 
-### 8. Enemy ship plates — **[OUTSOURCEABLE]**
+### 9. Enemy ship plates — **[OUTSOURCEABLE]**
 
 Slice 1 needs a second ship. The player plate took two attempts and a full
 retrace; the spec for getting one right is in `ASSETS.md` under "Ship plate
@@ -411,8 +432,9 @@ Three questions to send out. Research is the right job for a model that cannot
 run the code: it produces something usable even when it cannot test anything.
 The trap is vagueness, so each of these names its deliverable.
 
-**E1 — Can "does this look right" be machine-checked?** *(the most valuable of
-the three)*
+**E1 — Can "does this look right" be machine-checked?** — **ANSWERED 2026-08-17.**
+Report in `world/research/`; what to build with it is item 2 in the queue. The
+remaining text is kept because the brief is a good template for E2 and E3.
 
 This is the project's real bottleneck. The simulation has an automatic answer to
 "did I break it" — `verify.sh` plus the balance canary — which is why it has
@@ -451,43 +473,99 @@ settings to reach it, and how to measure the current build against it.
 owner's. The angle is not "how do tutorials work" but **"what do people hate
 about tutorials"** — see below.
 
-## The tutorial — the shape it is taking
+## Mission 1 — the shape, decided 2026-08-17
 
-Two missions, and the first one *is* the tutorial. No separate mode, no lesson.
+**It is one mission in two phases, not two missions.** The player never sees a
+break. The whole thing is the tutorial and there is no separate tutorial mode.
 
-1. **Rescue your crew** — the cargo hold. Built and playable.
-2. **Repel the boarders** — the pirate ship that just took your crew has people
-   aboard your ship. Not built.
+**Phase A — take the ship back.** Both ships are on screen from the first frame.
+The enemy hull is visible but its interior is not: you cannot see inside a ship
+you have not boarded. Your crew are in the cargo bay, restrained. A deal went
+wrong and they were taken by surprise — not beaten in a fair fight, which
+matters for how the crew talk about it afterwards. The pirates think it is over.
+TOCK is loose, and the crew can arm themselves once freed.
 
-Both must work before the run of five jumps exists.
+**Phase B — the pirates object.** Control of the ship is yours, and immediately
+the pirate ship opens fire. The first shots take shields, not hull, so you are
+not dying — you are *behind*. The crew you just freed are the resource, and they
+now have to be somewhere: stations manned, systems powered, someone in the
+cockpit.
 
-**This conflicts with the current build order and someone has to decide.**
-`SLICE.md` Slice 1 is ship-to-ship gunnery: two hulls, weapons charging,
-click an enemy room to target it. What is described above is **boarding
-combat** — enemies walking your corridors, your crew fighting them — and
-`GAME_SPEC v0.2 section 3` currently lists boarding as deferred, do-not-build.
+**Why this shape works.** Phase A teaches one verb — move a person, and moving
+is all you can do. Phase B keeps that verb and adds a reason to move *fast* and
+*to the right place*. Relief, then pressure. The crew you rescued become the
+crew you have to deploy, so the tutorial's reward is the next scene's mechanic.
 
-So one of three things has to happen, and it is an owner call:
-- the spec changes and boarding moves into v0.1, or
-- mission 2 becomes ship-to-ship after all, or
-- mission 2 is a cut-down boarding fight scoped tightly enough not to be the
-  full v0.2 mechanic.
+**It also resolves the conflict flagged yesterday.** Phase B is ship-to-ship
+gunnery, which is exactly `SLICE.md` Slice 1. Boarding is only in phase A, and
+only in the abstracted form that already exists — the hack/fight choice — so
+nothing here needs the full boarding mechanic that `GAME_SPEC v0.2 section 3`
+defers. If phase A ever grows into a real room-by-room fight, that is a separate
+decision.
 
-Whichever way it goes, **item 1 in this queue blocks it**: you cannot defend a
-ship when only TOCK can be given an order.
+**What blocks it:** item 1. Both phases are unplayable while only TOCK takes
+orders.
 
-**On tutorials people hate.** Worth stating the design position rather than
-researching it:
+## Item 1, expanded — how crew movement should actually work
 
-- Being told what is already on screen.
-- Modal boxes that stop play to explain play.
-- One permitted solution, enforced, before you may continue.
-- Walls of text before any input.
-- **And for a roguelike specifically: a tutorial you replay.** This is the big
-  one. Players will restart constantly, and anything unskippable becomes poison
-  by the fourth run. "The tutorial is mission 1" solves that — but only if
-  mission 1 is still worth playing on the twentieth run. That is the bar it has
-  to clear, and it is a higher bar than "teaches the controls".
+Split into two pieces because the second is bigger than it looks.
+
+### 1a. Selection and multi-crew orders
+
+- Click a crew member to select. Click another to switch. Click empty space to
+  clear.
+- **Drag a box to select several**, the way every squad game does it. Shift-click
+  to add and remove individuals.
+- With a selection, clicking a destination orders everyone in it.
+- `order_move` takes a crew member instead of assuming `scene.tock`. Room
+  capacity already exists and applies to whoever walks.
+
+### 1b. Corridors as destinations — *the one with the design consequence*
+
+Right now a destination must be a room, because `ShipLayout.path()` returns a
+chain of rooms and rooms are the only things with polygons. **You cannot send
+anyone into a corridor.**
+
+That is wrong for the game the owner is describing: before storming a room you
+want the squad assembled in the corridor outside it. Holding a corridor is a
+tactical position, not a transit.
+
+This is not just a UI change. It means:
+
+- Corridor segments need to be **places**, with a position and an occupancy
+  limit, not just lines between waypoints.
+- `sim/` has to accept a corridor as a valid `room` value for a crew member,
+  which touches `CrewMember.room`, `crew_in_room()`, capacity and the log.
+- Hit-testing has to resolve a click on the corridor to a segment.
+- The existing corridor graph in `data/ship_layout.json` already has the
+  geometry — waypoints and edges. What it lacks is the idea that the stretch
+  between two waypoints is somewhere you can stand.
+
+**Suggested order:** 1a first, on rooms only. It is self-contained, it unblocks
+phase A, and it can ship on its own. Then 1b as its own slice, because it
+changes what a "location" is in the simulation and that deserves its own commit
+and its own balance report.
+
+## A note on the research, and on unverified claims
+
+`world/research/2026-08-17-ai-assisted-godot-games.odt` describes four
+generations of AI-assisted development, ending with one where the model can
+inspect the running game rather than guess at it. That framing is worth keeping.
+
+**We are further along it than the report assumes.** This project already runs
+the game headless, screenshots it, renders walk cycles to GIF, reads binary GLB
+files and runs a 50-run simulation harness. The reason three outside packages
+arrived broken this week and the same tasks worked here is exactly that loop —
+not a better model.
+
+What is genuinely missing is that the loop is **ad hoc**. Poking at a running
+scene happens by writing a throwaway probe script each time; that is how the HUD
+anchoring bug was found. Item 2 is what turns that into something standing.
+
+**The named games and tools in that report are unverified.** This container
+cannot reach most of the web, so FARLUME, Void Balls, Beckett, Ziva, GDSnap and
+Stagehand were not checked. They are plausible and each takes a minute to
+confirm. Treat the *pattern* as sound and the *citations* as leads.
 
 ## How to hand a task out
 
