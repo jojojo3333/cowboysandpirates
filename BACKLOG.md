@@ -68,6 +68,35 @@ tools/verify.sh            # rules, static, sim — all three
    it means re-running `--mode bake` and pasting the `CREW_ART_OFFSET` it
    prints into `ui/ship_view.gd`.
 
+### Next after crew selection: make the enemy ship look alive
+
+The owner's read, and it is the right one — **a hostile ship with three figures
+standing perfectly still is scenery, not a threat.** People moving between
+compartments, working a station, reacting to being hit, is the thing that turns
+the combat screen from a picture into an opponent.
+
+**It is blocked on something unglamorous, and skipping that is the trap.** The
+enemy ship has no room data at all: `assets/ship/enemywarship1.png` is a plate
+and nothing else. No traced polygons, no adjacency, no corridor graph, no doors
+— none of what `data/ship_layout.json` gives the player's ship, and all of which
+`ui/corridor_map.gd` needs before anybody can walk anywhere. The three hostiles
+currently stand at pixel coordinates measured off the image by eye.
+
+So the order is:
+
+1. **Trace the enemy plate** the way the player's was — rooms as polygons,
+   corridor waypoints, doors. This is the whole job; everything else is small.
+2. Give the enemy a crew list and a room each. Static, but *addressable*.
+3. Then behaviour. Idle work at a station, walking between rooms, reacting.
+
+Step 3 without step 1 produces figures sliding through bulkheads, which is the
+exact bug the player's ship had before 2026-08-16 and which cost a session.
+
+**Do not invent enemy mechanics while doing this.** `GAME_SPEC v0.1 §2` and
+`v0.2 §3` are lists of what must not be built. Movement and presence are
+presentation; boarding rules, morale and enemy AI are design, and the specs get
+consulted first.
+
 **Owner is providing:** reference images for the UI look. Nothing UI-shaped
 should be built before those arrive — there is no UI art in the project at all
 now, deliberately.

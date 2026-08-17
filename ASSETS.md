@@ -36,7 +36,7 @@ because collections drift.
 |------|--------|---------|---------|----------|
 | `assets/ship/hull_plate.png` | Supplied by the project owner as `playerwarship1.png`. **Origin not stated.** 1797x875. | Owner-supplied | 2026-08-16 | The player ship: hull, compartments, corridors |
 | `assets/ship/hull_plate_normal.png` | Derived from the plate by `tools/make_normal_map.py` | follows the plate | 2026-08-16 | 2D lighting relief |
-| `assets/ship/enemywarship1.png` | Supplied by the project owner as `enemywarship1.png`. **Origin not stated — see below.** 1712x919. | Owner-supplied, licence unknown | 2026-08-17 | The enemy ship in the combat-preview scene |
+| `assets/ship/enemywarship1.png` | Owner-supplied. **Model-generated** (ChatGPT image generation, prompted from the player plate). 1712x919. | Owner-supplied | 2026-08-17 | The enemy ship in the combat-preview scene |
 | `assets/crew/soldier_*.png` (3 sheets) | Baked by `tools/render_soldier.gd` from the Silver Soldier | follows the model | 2026-08-16 | Crew sprite sheets: walk, idle, die x 8 facings |
 | `tools/crew_src/silver_soldier_animated.glb` | Sketchfab *Silver Soldier (Animated)* by **Jungle Jim** | **CC-BY 4.0** | 2026-08-16 | The only crew model. Bake source, **excluded from the web export** |
 
@@ -47,13 +47,10 @@ if either had come from a book, a marketplace or a VTT pack the licence would
 have had to permit redistribution. The project owner has confirmed both were
 generated. Nothing here is third-party artwork.
 
-**The enemy plate's origin is not stated, and it is committed anyway.** That is a
-knowing exception, recorded rather than quietly allowed: it arrived on 2026-08-17
-with a UI pass and is needed for the combat-preview composition. The question is
-open and belongs to the owner — **was `enemywarship1.png` generated, commissioned,
-or obtained from somewhere?** If it came from somewhere with terms, this
-repository is public and publishes to GitHub Pages, so committing it is
-publishing it, and the answer changes whether it can stay.
+**The enemy plate — answered, 2026-08-17. Also model-generated**, from ChatGPT
+image generation prompted off the player plate, which is why the two ships share
+a shape language and read as belonging to the same fleet. No third-party
+artwork, nothing to attribute.
 
 Ask the same question of the next plate. It is cheap to answer at the moment an
 image arrives and expensive to reconstruct later.

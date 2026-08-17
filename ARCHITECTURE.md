@@ -166,25 +166,43 @@ Known-but-unimplemented is a warning; malformed is a failure.
 
 ---
 
-## 5a. Two scenes, and which one boots
+## 5a. Three scenes, and which one boots
 
-Since 2026-08-17 there are two launchable scenes, and the split matters:
+Since 2026-08-17:
 
 | Scene | Script | What it is |
 |---|---|---|
-| `main.tscn` | `ui/combat_preview.gd` | **The boot scene.** A composition test for the ship-to-ship combat screen: two plates at equal scale, ours left, theirs right, minimal HUD. It contains no combat rules. |
-| `rescue_scene.tscn` | `main.gd` | The playable cargo-hold mission. What `verify.sh play`, `screenshot.gd` and `walk_frames.gd` all drive. |
+| `main.tscn` | `ui/start_menu.gd` | **The boot scene.** A development menu listing what can be launched. Not a title screen. |
+| `main_combat.tscn` | `ui/combat_preview.gd` | Ship-to-ship composition and HUD test: two plates at equal scale, ours left, theirs right. **No combat rules.** |
+| `rescue_scene.tscn` | `main.gd` | The playable cargo-hold mission. What `verify.sh play`, `screenshot.gd` and `walk_frames.gd` drive. |
 
 The one-scene rule below is superseded to exactly this extent and no further:
-**two scenes, one of which is a visual test bench.** It is not licence for a
-scene per screen.
+**a menu plus one scene per launchable thing.** It is not licence for a scene
+per screen.
+
+`main.gd` is the *mission*, not the boot scene, and has been since the split.
+The name is now misleading and is kept only because three tools load it by
+path; rename it and them together or not at all.
+
+**Registering a scene is one entry.** `ui/start_menu.gd`'s `ENTRIES` list is
+read twice: once to build the menu, once by `tools/play.gd` to assert every
+listed scene exists and loads. A scene that is offered and missing fails the
+build rather than waiting to be clicked.
 
 **This split has a sharp edge, and it drew blood immediately.** Every existing
-check pointed at the mission scene, so when the boot scene stopped compiling,
+check pointed at the mission scene, so when the combat scene stopped compiling,
 all of them stayed green and the project would not open. `verify.sh static` was
 the only thing that caught it, because it inspects the whole import rather than
 one scene. `play.gd` now also instantiates the boot scene and checks it builds
 something — see 5b for what that does and does not cover.
+
+**The enemy ship is a picture, not a place.** `ui/enemy_preview_view.gd` draws
+`enemywarship1.png` with three crew standing at hand-measured pixel positions.
+There is no traced room polygon, no adjacency, no corridor graph — none of what
+`data/ship_layout.json` gives the player's plate. Nothing can ask "which room is
+this hostile in?", because the answer does not exist. **Tracing the enemy plate
+is the prerequisite for enemy crew that do anything at all**, and it comes
+before behaviour work, not after.
 
 ## 5b. The truth layer — `tools/game_probe.gd`
 

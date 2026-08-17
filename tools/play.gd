@@ -109,6 +109,20 @@ func _check_boot_scene() -> void:
 	_check("boot-scene-built", node.get_child_count() > 0,
 		"%s built no UI at all — _ready() did not run or did nothing" % boot_path)
 
+	# Every scene the menu offers must actually be there. The menu greys out a
+	# missing entry so a human sees it, but only if a human opens the menu —
+	# this is the same question asked without one, on every run.
+	var entries: Variant = node.get("ENTRIES")
+	if entries is Array:
+		for entry: Dictionary in entries as Array:
+			var path: String = str(entry.get("scene", ""))
+			_check("menu-entry", ResourceLoader.exists(path),
+				"the menu offers '%s' but %s does not exist" % [entry.get("title", "?"), path])
+			_check("menu-entry-loads", load(path) != null,
+				"the menu offers '%s' but %s failed to load" % [entry.get("title", "?"), path])
+	else:
+		_skipped.append("menu-entry — the boot scene exposes no ENTRIES list")
+
 	var probe: GameProbe = GameProbe.new(node)
 	if probe.layout_is_trustworthy():
 		var collapsed: Array = probe.zero_sized_controls()
