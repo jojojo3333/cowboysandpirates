@@ -192,14 +192,23 @@ sections that drifted apart.
 
 ## Scope discipline
 
-`GAME_SPEC v0.1 §2` and `GAME_SPEC v0.2 §3` are lists of things that must not be
-built. They are not advisory. From v0.2: the Soldier is deliberately the weakest
-class and the Medic is deliberately near-useless alongside a Clone Bay. **Both
-are correct. Do not invent compensating mechanics.**
+**`GAME_SPEC.md`'s "not in this version" lists are retired, 2026-08-17.** They
+were written in the first hour, before anything had been tried, and the project
+has stepped over them repeatedly and correctly — crew pathfinding, then
+boarding, enemy crew and story, all of which mission 1 needs. A prohibition
+everyone ignores is worse than none, because it teaches the reader to skip the
+file. The document is being remade; `BACKLOG.md` holds that item.
 
-If the spec is ambiguous, ask. Do not invent mechanics — check the Non-Goals
-list first. If you finish a slice early, the answer is more tests, not more
-features.
+**What survives, until it is dropped on purpose.** Two entries in there are
+real design rather than stale scope-marking, and they exist to stop power creep:
+the Soldier is deliberately the weakest class, and the Medic is deliberately
+near-useless alongside a Clone Bay. **Do not invent compensating mechanics.**
+Change them by deciding to, not by forgetting they were deliberate.
+
+Retiring a list of non-goals is not licence to build whatever. The rule that
+replaces it is simpler and harder: **build the thing that was asked for.** If
+the shape of a feature is ambiguous, ask. If you finish a slice early, the
+answer is more tests, not more features.
 
 ## Working style
 

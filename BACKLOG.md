@@ -76,6 +76,36 @@ tools/verify.sh            # rules, static, sim — all three
    it means re-running `--mode bake` and pasting the `CREW_ART_OFFSET` it
    prints into `ui/ship_view.gd`.
 
+### Remake GAME_SPEC.md
+
+**The owner's call, 2026-08-17, and it is correct.** That document was written
+in the first hour, before anything had been tried, and it no longer describes
+this project. Two things are wrong with it beyond individual entries:
+
+- **The v0.1 / v0.2 versioning is the wrong axis.** It assumes a release cadence
+  that never existed and orders work by version number rather than by what
+  unblocks what. Development has repeatedly gone in an order those numbers
+  cannot express.
+- **The "not in this version" lists have been overtaken.** Mission 1 alone
+  contradicts three: boarding, enemy crew, and story. Crew pathfinding was
+  already struck out the same way. A list of prohibitions that everyone steps
+  over is worse than no list, because it teaches people to ignore the file.
+
+**What the replacement should keep.** Not everything in there is stale scope
+marking — some of it is real design, decided on purpose:
+
+- The Soldier is deliberately the weakest class; the Medic is deliberately
+  near-useless beside a Clone Bay. Anti-power-creep decisions, and they should
+  be **dropped deliberately if at all**, not swept out with the version numbers.
+- The system table — hull, reactor, shields, engines, weapons, medbay, and power
+  per bar — is worked-out numbers that act 2 would otherwise start from nothing.
+- Per-system manning XP: +20% at level 1, +35% at level 2.
+- Determinism and the seeded-RNG requirement, which the whole harness rests on.
+
+**Do this after the demo, not before.** Rewriting the design document is not
+what makes a stranger care about the crew on Wednesday, and doing it under time
+pressure is how the deliberate decisions above get lost.
+
 ### Mission 1 — the boarding
 
 **`MISSION_01.md` is the breakdown**: the beats, everything each one requires,

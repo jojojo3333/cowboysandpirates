@@ -50,9 +50,8 @@ breakdown underneath each one is the engineering cost of that beat.
 ### Act 2 — the fight *(recorded, not being built yet)*
 
 The pirate ship opens fire. Ship-to-ship combat, both ships visible. The player
-may assign crew to stations for bonuses — the spec already defines these as
-per-system manning bonuses, so this is implementing an existing design rather
-than inventing one. Assigning crew is **optional**: the player can simply shoot.
+may assign crew to stations for bonuses. Assigning crew is **optional**: the
+player can simply shoot.
 
 See "Act 2 — what it would take" near the bottom. Nothing in it is scheduled.
 
@@ -154,24 +153,27 @@ Not optional, and cheap now that the harness exists.
 
 ---
 
-## Two spec markers this crosses, deliberately
+## Where this stands against GAME_SPEC
 
-`GAME_SPEC v0.1 §2` calls itself "scope markers, not bans — if something here
-turns out to be the right next thing, move it and say so." So, saying so:
+**`GAME_SPEC.md` is being remade** — the owner's call, 2026-08-17, and the right
+one. Its v0.1 / v0.2 structure was written before anyone knew what would work,
+and the release-numbered "not in this version" lists assume a cadence this
+project never had. Mission 1 contradicts several of them simply by existing:
+boarding, enemy crew aboard, and story were all marked out of scope, and all
+three are act 1.
 
-- **"No boarding, no enemy crew."** Mission 1 is a boarding, with enemy crew
-  standing in our compartments. This marker is superseded by the mission itself.
-- **"No story"** (marked v0.3+). A voiced cold open and an in-engine cutscene
-  are story. This is a deliberate move, made because a stranger seeing the game
-  for the first time needs to care about the people in it, and no amount of
-  mechanics does that job.
+So **nothing in this file defers to those lists.** Where it cites the spec, it
+cites it as a place a number was already worked out, not as permission.
 
-Neither is being smuggled in. Both are recorded here so the specs can be updated
-rather than quietly contradicted.
+**One thing worth rescuing before the rewrite.** Two entries in there are not
+stale scope-marking, they are deliberate design: the Soldier is meant to be the
+weakest class, and the Medic is meant to be near-useless next to a Clone Bay.
+Both are anti-power-creep decisions someone made on purpose. They may still be
+wrong — but they should be dropped on purpose too, not swept out with the
+version numbers. Same goes for the per-system manning bonuses act 2 assumes:
+those numbers exist and are worth keeping unless there is a reason to move them.
 
-**What is *not* being moved:** the Soldier stays the weakest class and the Medic
-stays near-useless alongside a Clone Bay. `GAME_SPEC v0.2 §3` is explicit that
-both are correct, and no compensating mechanic gets invented while building this.
+The rewrite is an item in `BACKLOG.md`.
 
 ---
 
@@ -185,11 +187,11 @@ or may simply shoot.
 
 | Piece | Notes |
 |---|---|
-| **Ship-to-ship combat loop** | Weapon charge, fire, resolve. `GAME_SPEC v0.1 §4` already specifies hull, reactor, shields, engines, weapons, medbay and the power-per-system table. This is implementing a written design. |
+| **Ship-to-ship combat loop** | Weapon charge, fire, resolve. Hull, reactor, shields, engines, weapons, medbay and a power-per-system table were all worked out once already in `GAME_SPEC.md`. That document is being remade, but those numbers are a starting point rather than a blank page. |
 | **Power allocation** | Reactor bars assigned across systems; a damaged system loses effective power. Specified. |
 | **Weapon fire, seen** | The owner's point, and it is the right one: *"you got hit for 2 damage"* with nothing on screen is not a fight. Needs a shot travelling between the two hulls and an impact on the struck compartment. |
 | **Damage to compartments** | A hit room goes dark, which the lighting already supports — an unpowered compartment can simply stop being lit. |
-| **Manning stations for bonuses** | Already designed: per-system XP, +20% at level 1, +35% at level 2, `GAME_SPEC v0.2`. **Optional for the player** — that is a deliberate design choice and should stay one. |
+| **Manning stations for bonuses** | Numbers already exist: per-system XP, +20% at level 1, +35% at level 2. **Optional for the player** — that is a deliberate design choice and should stay one. |
 | **Enemy ship needs tracing first** | It is a picture, not a place: no rooms, no corridors, no doors. Enemy crew cannot stand anywhere meaningful, let alone move, until it is traced. Already recorded in `BACKLOG.md`. |
 | **Enemy behaviour** | Making the hostile ship look busy. Blocked on the tracing above. |
 
