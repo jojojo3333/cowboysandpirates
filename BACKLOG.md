@@ -45,10 +45,16 @@ tools/verify.sh            # rules, static, sim — all three
 
 **The first three things next session, in order:**
 
-1. **Verify the Beckett / Ziva claims.** Checklist at the end of
-   `world/research/2026-08-17-beckett-ziva-agent-loop.md`. Ten minutes, and the
-   answer reorders the queue — if Beckett's free edition can screenshot and read
-   the remote scene tree, most of item 2 is bought rather than built.
+1. ~~**Verify the Beckett / Ziva claims.**~~ Partly done 2026-08-17 — findings
+   appended to `world/research/2026-08-17-beckett-ziva-agent-loop.md`. **The
+   trigger fired:** Beckett is real, its free Lite edition is MIT and does
+   screenshot + live tree + runtime state, and Full is $15 one-time. Deterministic
+   frame stepping in `satelliteoflove/godot-mcp` is real too.
+   **So item 2 changes from "build a visual test harness" to "install Beckett
+   Lite in a scratch copy and read the tool list off the running server".**
+   Caveat, and it matters: this container can search the web but cannot fetch
+   itch.io or the Godot forum, so all of it is second-hand and nothing has been
+   installed. Ziva is still unchecked.
 2. **Item 1a**, crew selection and multi-crew orders. Everything is blocked on it.
 3. ~~**Fix the wonky walk.**~~ Done 2026-08-17, together with the camera move to
    80°. The two were the same job: the walk was wonky *because* it was built for
