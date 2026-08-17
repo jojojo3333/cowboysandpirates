@@ -135,6 +135,81 @@ func _check_boot_scene() -> void:
 
 	node.queue_free()
 	await process_frame
+	await _check_early_input()
+
+
+# Every scene, poked with a mouse on the frame it appears.
+#
+# This is a regression check for a real crash: `ShipView` builds its Node2D
+# world on the first `_process` that has both a scene and a layout, but
+# `_gui_input` starts arriving as soon as the node is in the tree. Since the
+# pointer is usually already over the window when a scene loads, the very first
+# event is a mouse motion into a half-built view — `to_plate()` dereferenced a
+# null `_world` and the combat screen died on load.
+#
+# **Nothing here caught it**, and the reason is worth keeping: every existing
+# check drives a scene that has already settled for several frames. The
+# dangerous frame is the first one, so this pokes exactly that.
+func _check_early_input() -> void:
+	# A bare view first, and this is the version that actually reproduces it.
+	#
+	# Poking a real scene after `await process_frame` turned out to be a race:
+	# whether `_build()` has run by then depends on frame ordering, and it
+	# differed between the two scenes and between running this alone and running
+	# it after other checks. A test that only sometimes exercises the broken path
+	# is worse than none, because it reports green and means nothing. A freshly
+	# constructed ShipView has no scene, no layout and no world, always.
+	var bare: ShipView = ShipView.new()
+	bare.size = Vector2(400.0, 300.0)
+	root.add_child(bare)
+	_poke(bare)
+	bare.queue_free()
+	await process_frame
+
+	for path: String in ["res://main_combat.tscn", "res://rescue_scene.tscn"]:
+		var packed: PackedScene = load(path) as PackedScene
+		if packed == null:
+			continue
+		var node: Node = packed.instantiate()
+		root.add_child(node)
+		# Deliberately no frame awaited: this is the state a scene is in at the
+		# instant it enters the tree, which is when the first mouse event lands.
+		var ship: ShipView = _find_ship(node)
+		if ship != null:
+			_poke(ship)
+		# **There is no assertion here on purpose, and that needs explaining.**
+		# A GDScript runtime error prints `SCRIPT ERROR` and carries on — it does
+		# not raise, cannot be caught, and does not fail the run. So a check like
+		# `_check("early-input", true, ...)` would be a check that cannot fail,
+		# which is worth nothing. What catches this is `tools/verify.sh play`
+		# grepping the output for SCRIPT ERROR, exactly as `verify.sh static`
+		# already does. This function's job is to *provoke* the error; the
+		# runner's job is to notice it.
+		node.queue_free()
+		await process_frame
+
+
+# A move, a press, a drag and a release, at whatever state the view is in.
+func _poke(ship: ShipView) -> void:
+	var motion: InputEventMouseMotion = InputEventMouseMotion.new()
+	motion.position = Vector2(200.0, 150.0)
+	ship._gui_input(motion)
+
+	var press: InputEventMouseButton = InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = Vector2(200.0, 150.0)
+	ship._gui_input(press)
+
+	var moved: InputEventMouseMotion = InputEventMouseMotion.new()
+	moved.position = Vector2(320.0, 260.0)
+	ship._gui_input(moved)
+
+	var release: InputEventMouseButton = InputEventMouseButton.new()
+	release.button_index = MOUSE_BUTTON_LEFT
+	release.pressed = false
+	release.position = Vector2(320.0, 260.0)
+	ship._gui_input(release)
 
 
 # One scripted playthrough. Returns the state trace, so two of them can be

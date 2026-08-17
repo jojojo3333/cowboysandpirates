@@ -130,6 +130,20 @@ verify_play() {
   out="$("${runner[@]}" --script res://tools/play.gd 2>&1)"
   local rc=$?
   echo "$out" | grep -E '^(play:|FAIL|SKIP)' || true
+
+  # A GDScript runtime error prints and carries on: it does not raise, cannot be
+  # caught from inside the script, and leaves the exit code at 0. So an assertion
+  # in play.gd can never see one, and a run full of null dereferences reports
+  # itself as green. The output has to be inspected instead — the same reason
+  # `static` greps rather than trusting the exit code.
+  #
+  # This is what catches the class of bug where a scene errors on its first
+  # frame: play.gd provokes it, and this notices.
+  if grep -qE 'SCRIPT ERROR|Invalid access|Invalid call|Cannot call method' <<<"$out"; then
+    bad "scripted playthrough — runtime errors"
+    grep -E 'SCRIPT ERROR|Invalid access|Invalid call|Cannot call method' <<<"$out" | head -8
+    return
+  fi
   if [[ $rc -eq 0 ]]; then ok "scripted playthrough"; else bad "scripted playthrough"; fi
 }
 

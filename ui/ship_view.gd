@@ -265,8 +265,19 @@ func _fit() -> void:
 		_world.position.x += plate.x * _fit_scale
 
 
+# Screen to plate coordinates.
+#
+# **Guarded against `_world` not existing yet**, which is not a hypothetical: the
+# node is created in one frame and `_build()` runs in the first `_process` that
+# has both a scene and a layout. A mouse moving across the panel in between —
+# which is most of them, because the pointer is usually already over the window
+# when a scene loads — arrives at `_gui_input` and lands here. It crashed the
+# combat screen on load.
+#
+# The old guard checked `_fit_scale`, which is 1.0 before any fitting has
+# happened, so it passed and then dereferenced a null `_world` one line later.
 func to_plate(local: Vector2) -> Vector2:
-	if _fit_scale <= 0.0:
+	if _world == null or _fit_scale <= 0.0:
 		return Vector2.ZERO
 	return (local - _world.position) / _fit_scale
 
@@ -275,6 +286,8 @@ func to_plate(local: Vector2) -> Vector2:
 # over the whole ship" in plate coordinates and have real mouse events land in
 # the right place whatever the zoom happens to be.
 func to_screen(plate_point: Vector2) -> Vector2:
+	if _world == null:
+		return Vector2.ZERO
 	return plate_point * _fit_scale + _world.position
 
 
@@ -504,6 +517,11 @@ func _pulse_lights() -> void:
 # release. That is also why the click actions live in the release branch rather
 # than the press branch, where they used to be.
 func _gui_input(event: InputEvent) -> void:
+	# Nothing to point at until the world exists. This guard used to sit below
+	# the motion branch, which meant hover was processed on a half-built view.
+	if scene == null or layout == null or _world == null:
+		return
+
 	var motion: InputEventMouseMotion = event as InputEventMouseMotion
 	if motion != null:
 		var here: Vector2 = to_plate(motion.position)
@@ -519,8 +537,6 @@ func _gui_input(event: InputEvent) -> void:
 
 	var click: InputEventMouseButton = event as InputEventMouseButton
 	if click == null or click.button_index != MOUSE_BUTTON_LEFT:
-		return
-	if scene == null or layout == null or _world == null:
 		return
 
 	if click.pressed:

@@ -138,6 +138,27 @@ Carried forward so they are not rediscovered. Every one of these was paid for.
 - **Render the comparison before believing the reasoning.** "A pure overhead
   view of a human is a blob" sat in `ASSETS.md` for a day and decided the camera
   angle. It took one contact sheet to show it was false at every angle tested.
+- **A view that builds itself lazily can be clicked before it exists.**
+  `ShipView` creates its Node2D world on the first `_process` that has a scene
+  and a layout, but `_gui_input` starts arriving the moment the node is in the
+  tree — and the pointer is usually already over the window when a scene loads.
+  The first mouse motion hit a null `_world` and killed the combat screen on
+  load. Guard the coordinate helpers, not just the click handler.
+- **A GDScript runtime error does not fail anything by itself.** It prints
+  `SCRIPT ERROR`, carries on, and leaves the exit code at 0, so no assertion
+  inside the script can ever see it and a run full of null dereferences reports
+  itself green. `tools/verify.sh play` now greps its own output, the same way
+  `static` always has.
+- **Beware frame-timing races in the checks themselves.** The first attempt at a
+  regression test for the bug above poked a real scene after one frame — and
+  whether the world had been built by then varied between scenes and between
+  runs. It passed on the broken build. The version that works constructs a bare
+  `ShipView` that is guaranteed to have nothing built.
+- **A mutation test needs a re-import to mean anything.** Editing a `.gd` file
+  and re-running `--script` uses Godot's cached compile, so the "broken" build
+  is quietly still the working one. Two mutation tests here reported green
+  against code that was genuinely broken before this was noticed. Run
+  `--headless --import` between the edit and the test.
 - **`set_anchors_preset()` sets the anchors and leaves the offsets alone.** A
   Control can end up with anchors 0,0,1,1 and offsets 0,0,-1920,-1080, which is
   a 0x0 node whose children collapse into the top-left corner. Use
