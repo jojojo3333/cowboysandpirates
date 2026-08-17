@@ -4,7 +4,8 @@
 #   tools/verify.sh rules    the house rules, as checks instead of prose
 #   tools/verify.sh static   project parses and imports; data contracts hold
 #   tools/verify.sh sim      headless test suite + balance report
-#   tools/verify.sh          all three
+#   tools/verify.sh play     the assembled game, played through and asserted
+#   tools/verify.sh          all four
 #
 # A change is not done until both are green. Do not weaken a check to make it
 # pass — see CLAUDE.md.
@@ -107,12 +108,39 @@ verify_sim() {
   fi
 }
 
+verify_play() {
+  hdr "play"
+
+  # The assembled game, UI included, played to the end and checked. `sim` proves
+  # the simulation is right with no UI attached — which is exactly why it cannot
+  # see a crew member drawn outside the room they are standing in, or a panel
+  # that resolved to the wrong size.
+  #
+  # Under a display when one can be had. Headless Godot lays the root Control
+  # out against a 64x64 stand-in window, so the layout assertions are not
+  # trustworthy there and play.gd skips them by name rather than passing them.
+  local runner=("$GODOT" --headless)
+  if command -v xvfb-run >/dev/null 2>&1; then
+    runner=(xvfb-run -a "$GODOT")
+  else
+    skip "no xvfb-run; layout checks will be skipped inside play"
+  fi
+
+  local out
+  out="$("${runner[@]}" --script res://tools/play.gd 2>&1)"
+  local rc=$?
+  echo "$out" | grep -E '^(play:|FAIL|SKIP)' || true
+  if [[ $rc -eq 0 ]]; then ok "scripted playthrough"; else bad "scripted playthrough"; fi
+}
+
+
 case "${1:-all}" in
   rules)  verify_rules ;;
   static) verify_static ;;
   sim)    verify_sim ;;
-  all)    verify_rules; verify_static; verify_sim ;;
-  *)      echo "usage: tools/verify.sh [rules|static|sim]" >&2; exit 2 ;;
+  play)   verify_play ;;
+  all)    verify_rules; verify_static; verify_sim; verify_play ;;
+  *)      echo "usage: tools/verify.sh [rules|static|sim|play]" >&2; exit 2 ;;
 esac
 
 echo

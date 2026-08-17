@@ -56,6 +56,10 @@ tools/verify.sh            # rules, static, sim — all three
    itch.io or the Godot forum, so all of it is second-hand and nothing has been
    installed. Ziva is still unchecked.
 2. **Item 1a**, crew selection and multi-crew orders. Everything is blocked on it.
+   It now has a harness waiting for it: `tools/game_probe.gd` already reports
+   crew state and `tools/verify.sh play` already plays a mission through the
+   real buttons, so "which crew member is selected" is one field and one
+   assertion away rather than a thing to eyeball in a screenshot.
 3. ~~**Fix the wonky walk.**~~ Done 2026-08-17, together with the camera move to
    80°. The two were the same job: the walk was wonky *because* it was built for
    a view the game did not have. See "The camera angle" in `ASSETS.md`.
@@ -637,14 +641,36 @@ files and runs a 50-run simulation harness. The reason three outside packages
 arrived broken this week and the same tasks worked here is exactly that loop —
 not a better model.
 
-What is genuinely missing is that the loop is **ad hoc**. Poking at a running
-scene happens by writing a throwaway probe script each time; that is how the HUD
-anchoring bug was found. Item 2 is what turns that into something standing.
+~~What is genuinely missing is that the loop is **ad hoc**.~~ **Built, 2026-08-17.**
+Poking at a running scene used to mean writing a throwaway probe each time —
+that is how the HUD anchoring bug was found, in two minutes, by a script that
+was then thrown away. `tools/game_probe.gd` is that probe kept, and
+`tools/verify.sh play` runs a whole mission against it. `ARCHITECTURE.md 5b` has
+the design.
 
-**The named games and tools in that report are unverified.** This container
-cannot reach most of the web, so FARLUME, Void Balls, Beckett, Ziva, GDSnap and
-Stagehand were not checked. They are plausible and each takes a minute to
-confirm. Treat the *pattern* as sound and the *citations* as leads.
+**What it cost to make it real, which is the part worth remembering.** Writing
+the checks took an hour; finding out they *worked* took longer and was the
+valuable half. Three deliberate breakages, and the first two passed:
+
+- the sprite art offset — the probe was comparing the wrong number, so it would
+  have missed the very bug fixed that morning;
+- the collapsed HUD Control — `BACKLOG.md` called it "a 0x0 node", so the probe
+  hunted for zero sizes; a *Container* with stale offsets shrinks to fit its
+  children instead, coming back 1071x609 in a 1280x720 window;
+- and beneath both, the layout assertions had been passing on numbers that meant
+  nothing, because headless Godot lays the root Control out against a 64x64
+  stand-in window.
+
+**So: break it on purpose before believing it.** That is now in `CLAUDE.md`.
+It is the same lesson as the camera angle earlier the same day — a confident
+description of how something behaves is not evidence of how it behaves.
+
+**The named games and tools in that report were unverified.** Beckett and
+`satelliteoflove/godot-mcp` have since been checked as far as this container
+allows — see the appendix to
+`world/research/2026-08-17-beckett-ziva-agent-loop.md`. FARLUME, Void Balls,
+Ziva, GDSnap and Stagehand are still unchecked. Treat the *pattern* as sound and
+the remaining *citations* as leads.
 
 ## How to hand a task out
 

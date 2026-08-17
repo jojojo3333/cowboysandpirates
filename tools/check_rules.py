@@ -182,6 +182,30 @@ def rule_clip_frames_match() -> None:
                  f"tools/render_soldier.gd")
 
 
+# --- the probe only reads ---------------------------------------------------
+# tools/game_probe.gd answers questions about the running game. The moment it
+# can also change the game it becomes a second, undocumented way to play, and
+# the real one and the test one drift apart until the tests describe a game
+# nobody ships. ARCHITECTURE.md 5b states this; here it is enforced.
+
+PROBE_MUTATORS = (
+    "choose_plan", "order_move", "order_free", "toggle_pause", ".tick(",
+    "queue_free", "set_process", ".emit(",
+)
+
+
+def rule_probe_is_read_only() -> None:
+    path = ROOT / "tools" / "game_probe.gd"
+    if not path.exists():
+        return
+    for n, line in lines_of(path):
+        code = strip_comment(line)
+        for token in PROBE_MUTATORS:
+            if token in code:
+                fail("probe-read-only",
+                     f"tools/game_probe.gd:{n} changes game state: {token}")
+
+
 # --- the camera contract ----------------------------------------------------
 # Every script that photographs a 3D model for this game must shoot it from the
 # angle the game draws crew at. tools/preview_models.gd exists specifically to
@@ -289,6 +313,7 @@ RULES = [
     rule_control_sizing,
     rule_clip_frames_match,
     rule_camera_pitch_matches,
+    rule_probe_is_read_only,
     rule_assets_are_recorded,
     rule_export_excludes_sources,
     rule_tabs,

@@ -383,8 +383,13 @@ const CLIP_FRAMES: Dictionary = {"walk": 8, "idle": 4, "die": 6}
 const CLIP_FPS: Dictionary = {"walk": 11.0, "idle": 3.0, "die": 8.0}
 
 
-func _make_crew_sprite(_member: CrewMember) -> Sprite2D:
+func _make_crew_sprite(member: CrewMember) -> Sprite2D:
 	var sprite: Sprite2D = Sprite2D.new()
+	# Named after the crew member so the running scene tree can be read back by
+	# something that is not a person looking at it — tools/game_probe.gd matches
+	# on this prefix to check that the figure is drawn where the simulation says
+	# the crew member is. Anonymous @Sprite2D@14 tells nobody anything.
+	sprite.name = "crew_%s" % member.id
 	sprite.offset = Vector2(0.0, CREW_ART_OFFSET)
 	sprite.scale = Vector2(CREW_SCALE, CREW_SCALE)
 	_crew_layer.add_child(sprite)

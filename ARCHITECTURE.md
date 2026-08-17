@@ -166,6 +166,72 @@ Known-but-unimplemented is a warning; malformed is a failure.
 
 ---
 
+## 5b. The truth layer — `tools/game_probe.gd`
+
+**Ask the running game what is true. Do not infer it from pixels.**
+
+`GameProbe` reads the assembled game and answers in the game's own nouns: which
+crew member is where, what the sprite is actually drawn at, which clip is
+playing, what the log recorded, how every Control resolved. `tools/play.gd`
+plays a scripted mission against it and asserts.
+
+This closes a specific gap. The three older checks each see part of the game:
+
+| | sees | cannot see |
+|---|---|---|
+| `verify.sh static` | does it parse and import | anything about behaviour |
+| `verify.sh sim` | the simulation, no UI attached | anything the UI does |
+| `tools/screenshot.gd` | pixels were drawn | whether they are the right pixels |
+| **`verify.sh play`** | **the assembled game, played** | how it feels |
+
+`sim_runner.gd` survived two complete renderer rewrites without noticing, which
+is the point of it and also its limit: it cannot see a crew member drawn outside
+the compartment they are standing in.
+
+**Three rules keep it honest.**
+
+1. **The probe only reads.** A probe that can move a crew member is a second,
+   undocumented way to play the game, and the two will drift.
+2. **The probe reports; `play.gd` judges.** What is *measured* and what is
+   *expected* have to be arguable separately.
+3. **Drive through the real path.** `play.gd` presses the actual `Button` and
+   emits `ShipView`'s actual `room_clicked`, rather than calling
+   `scene.choose_plan()` and `scene.order_move()`. Calling into the simulation
+   directly is what `sim_runner.gd` already does; doing it twice would test
+   main.gd's wiring not at all.
+
+**Determinism.** `main.gd`'s `_process` is switched off and stepped by hand at a
+fixed 1/30 s, then the whole run is played twice and the traces compared. Same
+seed, same steps, same answers — the same property `sim/rng.gd` gives the
+simulation, extended to the UI. Wall-clock frame timing is the one source of
+flake a real-time-with-pause game cannot afford in its own tests. The harness
+independently reaches **40.3s**, the balance canary's number, by a completely
+different route.
+
+**A check that cannot fail is worth nothing**, so each was tried against a
+deliberately broken build before being kept. Two of the first three attempts
+were themselves wrong, which is the argument for doing it:
+
+- Crew drawn at the wrong point — **caught.**
+- A wrong sprite art offset — **missed at first.** The probe was comparing
+  `crew_position()`, which the art offset does not touch, so it would not have
+  caught the bug fixed the same day. It now reports where the *picture* lands as
+  well as where the crew member stands.
+- A collapsed HUD Control — **missed twice.** `BACKLOG.md` describes it as "a
+  0x0 node", so the probe looked for zero sizes and found none: a *Container*
+  with stale offsets does not collapse to zero, it shrinks to fit its children.
+  Reproduced deliberately, the top-level margin came back 1071x609 in a 1280x720
+  window. Not zero, just wrong. The check that bites compares anchors against
+  resolved size — "claims to fill its parent, does not fill its parent".
+
+**Layout assertions need a display.** Headless Godot lays the root Control out
+against a 64x64 stand-in window while its children resolve against the project
+viewport, so the sizes come back internally inconsistent and every layout
+assertion passes on numbers that mean nothing. `play.gd` checks the root against
+the *project's configured* viewport and reports those checks as **skipped**
+rather than green when it cannot trust them. `verify.sh play` uses `xvfb-run`
+when it is available.
+
 ## 6. What lives nowhere yet
 
 Named so nobody invents a home for them early:

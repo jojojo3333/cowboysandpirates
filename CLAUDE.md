@@ -128,8 +128,24 @@ project can go wrong.
 tools/verify.sh rules      # the house rules, as checks instead of prose
 tools/verify.sh static     # parses, imports, and validates data
 tools/verify.sh sim        # headless test suite + balance report
-tools/verify.sh            # all three
+tools/verify.sh play       # the assembled game, played through and asserted
+tools/verify.sh            # all four
 ```
+
+**`play` is the one that sees the game the player sees.** `sim` runs the
+simulation with no UI attached — which is why it survived two renderer rewrites,
+and equally why it cannot see a crew member drawn outside the compartment they
+are standing in, or a panel that resolved to the wrong size. `tools/play.gd`
+presses the real buttons, steps the clock by hand at a fixed 1/30 s, and asserts
+through `tools/game_probe.gd`. `ARCHITECTURE.md 5b` explains the split; the short
+version is **ask the running game what is true, do not infer it from pixels**.
+
+**A check that cannot fail is worth nothing.** Every assertion in `play.gd` and
+every rule in `check_rules.py` was run against a deliberately broken build before
+being kept. This is not ceremony: two of the first three attempts silently passed
+on a genuinely broken game, and one of them was passing on layout numbers that
+were meaningless because headless Godot had not laid the UI out. Break it on
+purpose, watch it go red, then put it back.
 
 **`rules` exists because this document does not work on its own.** Everything it
 checks was already written down here, and several were broken anyway — a rule in
