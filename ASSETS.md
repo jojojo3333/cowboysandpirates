@@ -38,8 +38,6 @@ because collections drift.
 | `assets/ship/hull_plate_normal.png` | Derived from the plate by `tools/make_normal_map.py` | follows the plate | 2026-08-16 | 2D lighting relief |
 | `assets/crew/soldier_*.png` (3 sheets) | Baked by `tools/render_soldier.gd` from the Silver Soldier | follows the model | 2026-08-16 | Crew sprite sheets: walk, idle, die x 8 facings |
 | `tools/crew_src/silver_soldier_animated.glb` | Sketchfab *Silver Soldier (Animated)* by **Jungle Jim** | **CC-BY 4.0** | 2026-08-16 | The only crew model. Bake source, **excluded from the web export** |
-| `assets/crew_src_modular/*.fbx` (2 files) | OpenGameArt *Modular 3D male/female* by **wolkoed** | **CC-BY 4.0** | 2026-08-16 | Candidate crew bodies. **Not wired up** — see below |
-| `assets/crew_src_modular/Textures/*.png` (3 files) | same pack — armour albedo, metallic, normal | **CC-BY 4.0** | 2026-08-16 | Armour material. No body/skin texture ships with the pack |
 
 **Origin of the plates — answered, 2026-08-16. Both are model-generated.** The
 question stood open through two plates: this repository is public and publishes
@@ -71,12 +69,11 @@ Sketchfab or OpenGameArt under the same terms.
 ```
 Silver Soldier (Animated) — Jungle Jim (CC-BY 4.0)
   https://sketchfab.com — supplied by the project owner
-
-Modular 3D male/female — wolkoed (CC-BY 4.0)
-  base mesh: "Human basemeshes" — thehumbug (CC-BY 3.0)
-  armour:    "Bandit armor and clothes" — wolkoed (CC-BY 4.0)
-             "Fantasy scaled armor" — nordwar (CC-BY 4.0)
 ```
+
+That is the whole list. The wolkoed modular bodies were removed on 2026-08-17
+along with the Kenney UI borders — neither was wired up, and both are in git
+history if wanted. **There is currently no UI art in the project at all.**
 
 ## The Silver Soldier — what is in it, and what had to be authored
 
