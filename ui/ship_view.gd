@@ -45,11 +45,15 @@ const OVERFLOW: float = 1.30
 const FACING_IDLE: int = 0
 const FACING_OFFSET: int = 2
 
-# The renders sit slightly low in their 128 px cell — the figures span y 32..114,
-# so their centre is 9 px below the cell's. Without this the crew stand below the
-# point the simulation says they occupy, and markers drawn at that point land on
-# their heads.
-const CREW_ART_OFFSET: float = -9.0
+# The renders sit slightly low in their 128 px cell — the figures span y 22..113,
+# so their centre is 3.5 px below the cell's. Without this the crew stand below
+# the point the simulation says they occupy, and markers drawn at that point land
+# on their heads.
+#
+# Do not hand-tune this. `tools/render_soldier.gd --mode bake` measures it off
+# the sheets it just wrote and prints the value to use; it moves whenever the
+# render camera does, and it moved from -9.0 when the camera went overhead.
+const CREW_ART_OFFSET: float = -3.5
 
 # Crew are drawn at half the render size. The sheets are 128 px cells, and the
 # compartments on this plate are 130-230 px across — a full-size figure filled

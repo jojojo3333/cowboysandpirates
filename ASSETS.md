@@ -123,11 +123,16 @@ Two candidate packs were assessed to replace the Kenney crew, which the owner
 finds too cartoonish. Both were judged on what the render pipeline actually
 needs, not on how they look in a product shot.
 
+**Both assessments below were made at the old 62° camera.** The camera is now
+80°, which does not change either verdict — it makes the first one stronger,
+since the gap between a shallow isometric sprite sheet and our view is now
+wider still.
+
 **Rejected: "400 items + base human male/orc/skeleton" (Skyzor, CC-BY 4.0).**
 Not 3D — pre-rendered 2D sprites from *Siege of Avalon*, an isometric RPG. Eight
 directions and eight animations, which matches our sheet layout exactly, and
 none of that helps: **the camera angle is baked in**. Our crew are rendered
-looking down at 62 degrees to sit on a top-down ship; those sprites were shot
+looking down at 80 degrees to sit on a top-down ship; those sprites were shot
 from a much shallower isometric view and cannot be re-angled. The author also
 notes hard alpha edges, which fray when scaled to the ~66 px crew are drawn at.
 
@@ -143,8 +148,8 @@ Measured directly from the FBX rather than from the description:
 
 Two blockers, both needing something the pack does not contain. Rendered at the
 game's own camera (`tools/preview_models.gd`) they come out as **white
-untextured figures frozen in a T-pose**, and a T-pose seen from 62 degrees above
-is a starfish, not a person.
+untextured figures frozen in a T-pose**, and a T-pose seen from overhead is a
+starfish, not a person.
 
 **The finding that matters beyond this pack.** Side by side at true game scale,
 the realistic bodies read *worse* than the Kenney ones — thin, pale, and small
@@ -299,22 +304,79 @@ the sheet is sliced wrongly and crew animate through their neighbours' frames.
 `DirectionalLight3D`s in code. Two details
 that are not obvious and cost a re-render each:
 
-- The camera looks down at **62°, not straight down.** A pure overhead view of a
-  human is a head and a pair of shoulders, which is the same blob the drawn
-  version produced. The tilt keeps the top-down read and leaves enough body for
-  the eye to recognise a person.
+- The camera looks down at **80°** — near-overhead, changed from 62° on
+  2026-08-17. See "The camera angle" below; the old entry here argued for 62 on
+  reasoning that turned out to be untested.
 - `look_at()` fails silently on a node that is not yet in the tree. Called
   before `add_child` it leaves the camera unrotated, pointing at the horizon.
-  Use `look_at_from_position()` or add the node first.
+  Use `look_at_from_position()` or add the node first. At **exactly 90°** it
+  fails a second way: the view direction is parallel to `Vector3.UP`, there is
+  no way to resolve the roll, and the camera is left unrotated again. `_aim()`
+  swaps the up vector for `Vector3.FORWARD` past 89.9°.
 
 `grim_sprites.py` desaturates to 16% and darkens to 62%. Kenney's palette is
 bright pastel and reads as toys on a worn steel hull. Near-neutral output also
 means the per-class tint applied at runtime lands cleanly instead of flooding
 the whole figure with one colour.
 
-The figures sit slightly low in their 128 px cell — y 32..114 — so `ShipView`
-offsets the sprite by -9 px. Without that the crew stand below the point the
+The figures sit slightly low in their 128 px cell — y 22..113 — so `ShipView`
+offsets the sprite by -3.5 px. Without that the crew stand below the point the
 simulation says they occupy, and markers drawn at that point land on their heads.
+**Do not hand-tune this figure.** `--mode bake` measures it off the sheets it has
+just written and prints the value to paste in; it moves whenever the camera does.
+
+## The camera angle — 80°, changed from 62° on 2026-08-17
+
+The owner's observation, and it is correct: our crew were being seen from the
+side while the ship was being seen from above, and the reference games do not do
+that. In Void War you see helmet, shoulders, and a bit of arm and leg when
+someone is moving. That is a much steeper camera than 62°.
+
+**The old reasoning was never tested.** It said a pure overhead view of a human
+"is a head and a pair of shoulders, which is the same blob the drawn version
+produced". Shot properly — `--mode angles --cell 190`, five pitches from 62 to
+90 side by side — that is false. The figure stays legible all the way to 90,
+because this model wears a helmet and carries a rifle, and those two things give
+it both a silhouette and a facing. **Nothing became a blob at any angle.** The
+belief survived because nobody had rendered the comparison; `--mode angles`
+exists so the next person does not have to take anyone's word for it either.
+
+So the pitch is a taste decision, not a legibility one, and 80° is the owner's
+to move. What is *not* taste is that 62° reads as a side-on figure standing on a
+top-down ship.
+
+### What moving the camera broke, and why
+
+Raising the pitch is not a one-constant change, because it changes which
+movements survive projection. A world displacement `(dx, dy, dz)` lands on
+screen at `(dx, dy·cos p − dz·sin p)`. At 80° that is **sideways 1.00, forwards
+0.98, upwards 0.17**.
+
+Everything vertical is therefore worthless from overhead, and the old walk was
+mostly vertical: knee lift, torso bob. Worse, **the torso hides the legs from
+above**, so a stride is invisible unless the feet swing clear of the body's own
+outline. The re-authored walk in `tools/render_soldier.gd` is built from what
+the camera keeps:
+
+| Cue | Why it reads from 80° |
+|---|---|
+| Hip / shoulder counter-rotation | pure yaw — invisible side-on, and the strongest walking cue from above |
+| Leg splay on the forward swing | puts the swinging foot outside the torso silhouette so the stride is visible at all |
+| Arm spread | carries the elbows past the shoulder line |
+| Lateral body sway | the one whole-body movement kept at full value |
+| Knee bend, torso bob | kept small; both are mostly vertical and nearly free to discard |
+
+The `die` clip is the one thing the new camera flatters. A fall is mostly
+downwards, which an overhead camera discards — so it now twists as it goes and
+lands on its side. Face down from above is a backpack.
+
+**This corrects the note in "Things that have already cost time" about the walk
+being tuned side-on at 18° and foreshortening at 62°.** The direction of that
+claim was wrong: fore-and-aft leg swing is *more* visible as the camera rises,
+not less (`sin 18° = 0.31`, `sin 62° = 0.88`). What foreshortens with height is
+everything *vertical*. The conclusion it led to — tune the walk in the view the
+game actually uses — was right anyway, so `--mode preview` now shoots at
+`CAMERA_PITCH` instead of dropping to 18°.
 
 Framing took three renders. The camera's aim point is what moves the figure in
 frame, and it moves it the opposite way to the intuition: aiming *higher* pushes

@@ -182,6 +182,38 @@ def rule_clip_frames_match() -> None:
                  f"tools/render_soldier.gd")
 
 
+# --- the camera contract ----------------------------------------------------
+# Every script that photographs a 3D model for this game must shoot it from the
+# angle the game draws crew at. tools/preview_models.gd exists specifically to
+# judge a candidate model "at the exact size and angle the game draws crew at" —
+# so if its pitch drifts from the baker's, it silently answers the wrong
+# question, and the answer is an art decision made on a false picture.
+#
+# This is not hypothetical. Two crew packs were assessed at 62 degrees and
+# written up in ASSETS.md at 62 degrees; the game now renders at 80, and those
+# write-ups cite an angle the project no longer uses.
+
+def rule_camera_pitch_matches() -> None:
+    baker = (ROOT / "tools" / "render_soldier.gd")
+    preview = (ROOT / "tools" / "preview_models.gd")
+    if not baker.exists() or not preview.exists():
+        return
+
+    def pitch(path: Path) -> float | None:
+        m = re.search(r"const\s+CAMERA_PITCH\s*:\s*float\s*=\s*([\d.]+)",
+                      path.read_text(encoding="utf-8"))
+        return float(m.group(1)) if m else None
+
+    a, b = pitch(baker), pitch(preview)
+    if a is None or b is None:
+        warn("camera-pitch", "could not read CAMERA_PITCH from both scripts; check by hand")
+        return
+    if a != b:
+        fail("camera-pitch",
+             f"CAMERA_PITCH is {a} in tools/render_soldier.gd but {b} in "
+             f"tools/preview_models.gd; a model judged at the wrong angle is judged wrongly")
+
+
 # --- asset provenance -------------------------------------------------------
 # ASSETS.md: nothing is committed without its origin recorded. This repository
 # is public and publishes to GitHub Pages, so committing art is distributing it.
@@ -256,6 +288,7 @@ RULES = [
     rule_static_typing,
     rule_control_sizing,
     rule_clip_frames_match,
+    rule_camera_pitch_matches,
     rule_assets_are_recorded,
     rule_export_excludes_sources,
     rule_tabs,

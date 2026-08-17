@@ -50,10 +50,13 @@ tools/verify.sh            # rules, static, sim — all three
    answer reorders the queue — if Beckett's free edition can screenshot and read
    the remote scene tree, most of item 2 is bought rather than built.
 2. **Item 1a**, crew selection and multi-crew orders. Everything is blocked on it.
-3. **Fix the wonky walk.** The cause is known and written down: the stride was
-   tuned side-on at 18 degrees and the game views crew from 62, where leg swing
-   is foreshortened to almost nothing. Constants at the top of
-   `tools/render_soldier.gd`; preview with `--mode preview`, then `--mode bake`.
+3. ~~**Fix the wonky walk.**~~ Done 2026-08-17, together with the camera move to
+   80°. The two were the same job: the walk was wonky *because* it was built for
+   a view the game did not have. See "The camera angle" in `ASSETS.md`.
+   **The pitch itself is still open** — it is one constant, `CAMERA_PITCH` in
+   `tools/render_soldier.gd`, and the owner has the comparison renders. Moving
+   it means re-running `--mode bake` and pasting the `CREW_ART_OFFSET` it
+   prints into `ui/ship_view.gd`.
 
 **Owner is providing:** reference images for the UI look. Nothing UI-shaped
 should be built before those arrive — there is no UI art in the project at all
@@ -72,8 +75,23 @@ Carried forward so they are not rediscovered. Every one of these was paid for.
   `tools/render_soldier.gd`**, or the sheets are sliced wrongly and crew animate
   through their neighbours' frames.
 - **Tune art in the view the game actually uses.** The walk cycle was shaped
-  looking at it side-on at 18 degrees; the game sees crew from 62 degrees, where
-  a leg swing is heavily foreshortened. It looks wonky for exactly that reason.
+  looking at it side-on at 18 degrees and shipped at 62. It looked wonky for
+  exactly that reason. `--mode preview` now shoots at `CAMERA_PITCH` so this
+  cannot recur.
+- **…and get the reason right, not just the conclusion.** The line above used to
+  say leg swing was "heavily foreshortened" at 62°. That was backwards. Screen
+  offset for a world displacement is `(dx, dy·cos p − dz·sin p)`, so raising the
+  camera makes horizontal movement *more* visible, not less — it is **vertical**
+  movement that vanishes. The advice happened to be right while the reasoning
+  was wrong, which is the worst failure mode for a note like this, because
+  nobody re-checks a rule that keeps working.
+- **A camera angle is not one constant.** Moving it changes which movements
+  survive projection, so the animation has to be re-authored, not rescaled, and
+  every script that photographs a model has to move with it. `tools/verify.sh
+  rules` now checks `render_soldier.gd` and `preview_models.gd` agree.
+- **Render the comparison before believing the reasoning.** "A pure overhead
+  view of a human is a blob" sat in `ASSETS.md` for a day and decided the camera
+  angle. It took one contact sheet to show it was false at every angle tested.
 - **`set_anchors_preset()` sets the anchors and leaves the offsets alone.** A
   Control can end up with anchors 0,0,1,1 and offsets 0,0,-1920,-1080, which is
   a 0x0 node whose children collapse into the top-left corner. Use
@@ -363,12 +381,12 @@ xvfb-run -a godot --script res://tools/preview_models.gd -- --out /tmp/cast
 | Rig | humanoid skeleton, skinned |
 | Clips | named **exactly** `walk`, `idle`, `die`. Others are ignored, not an error |
 | Walk clip | a real cycle that loops seamlessly, 8 frames sampled |
-| Rest pose | **not a T-pose.** From 62° above a T-pose is a starfish, not a person |
+| Rest pose | **not a T-pose.** From 80° above a T-pose is a starfish, not a person |
 | Height | figure roughly 1.0–2.0 units, standing on the origin, facing −Z |
 | Licence | CC0 preferred. CC-BY accepted **with the credit line supplied** |
 
 **The design test, which matters more than any of the above.** At 66 px seen
-from 62° overhead, realistic proportions read *worse* than exaggerated ones —
+from 80° overhead, realistic proportions read *worse* than exaggerated ones —
 thin, pale, hard to pick out. This was measured, not guessed; the comparison is
 in `ASSETS.md`. A replacement must earn its bulk through **armour, a pack, a
 helmet** — a silhouette that is wide because the character is wearing something.
@@ -488,13 +506,19 @@ Godot 4, plus an honest section on what genuinely still needs eyes.
 **E2 — Walk cycles from a Character Creator rig, seen from steeply above.**
 
 We author a walk on the model's own bones and bake it to 8-direction sprites
-(`tools/render_soldier.gd`). It reads as wonky. The camera is 62 degrees above
-horizontal, which foreshortens leg swing badly.
+(`tools/render_soldier.gd`). The camera is 80 degrees above horizontal.
 
-Wanted: what swing angles, knee timing and foot-plant handling read correctly at
-a steep overhead camera; whether feet should be pinned to the floor and how;
-how many frames a walk needs to read at ~35 px. **Deliverable:** concrete
-numbers we can put straight into the constants at the top of that file.
+**Partly answered in-house on 2026-08-17** — the walk was rebuilt around hip and
+shoulder counter-rotation, leg splay, arm spread and lateral sway, on the
+reasoning that only horizontal movement survives an overhead projection. That is
+derived from the projection, not from anyone who animates for a living, and it
+has only been judged on stills in a GPU-less container.
+
+Still wanted, and now more specific: whether the counter-rotation should lead or
+lag the leg swing; whether feet should be pinned to the floor and how; how many
+frames a walk needs to read at ~35 px; and whether 8 frames at 11 fps is the
+right budget. **Deliverable:** concrete numbers we can put straight into the
+constants at the top of that file.
 
 **E3 — Godot 4 web export budgets.**
 

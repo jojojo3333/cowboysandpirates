@@ -95,6 +95,40 @@ kept here only because it is the evidence for the paragraph above.
 **Reported, not tuned:** the balance report read 39.4s for both plans through
 all three passes, with end HP [100 ×5] hack and [75 ×5] fight.
 
+## RENDER PASS 4 — the crew are seen from above  ✅ DONE, 2026-08-17
+
+The owner's observation, and the whole pass in one line: **the ship was drawn
+from above and the crew were drawn from the side.** Void War shows you a helmet,
+a pair of shoulders, and a bit of arm and leg when someone moves. We were
+showing a standing figure on a top-down deck.
+
+- Render camera raised from **62° to 80°**. It is one constant,
+  `CAMERA_PITCH` in `tools/render_soldier.gd`.
+- **The walk was rebuilt, not rescaled.** Raising the camera changes which
+  movements survive projection: at 80° sideways and forwards movement land on
+  screen at full value and vertical movement is worth 0.17. The old stride was
+  mostly vertical — knee lift, torso bob — and the torso hides the legs from
+  above anyway. The new one is hip/shoulder counter-rotation, leg splay, arm
+  spread and lateral sway. `ASSETS.md` has the table.
+- **`--mode angles`** shoots the figure down a list of pitches onto one contact
+  sheet and prints each one's bounding box. It exists because the 62° decision
+  rested on an untested claim — that a pure overhead human is "a blob" — which
+  the first contact sheet disproved at every angle up to 90.
+- **`--mode bake` now measures `CREW_ART_OFFSET` and prints it**, instead of it
+  being hand-tuned and re-guessed. It moved from -9.0 to -3.5 on this pass.
+- `--mode preview` shoots at the game's pitch instead of dropping to 18°.
+- `tools/verify.sh rules` gained a check that `render_soldier.gd` and
+  `preview_models.gd` hold the same pitch — a candidate model judged at the
+  wrong angle is judged wrongly, and that script exists only to judge them.
+
+**Reported, not tuned: 40.3s for both plans, unchanged**, end HP [100 ×5] hack
+and [75 ×5] fight. Which is the point of the rule — this pass changed only how
+crew are photographed, so the number had no business moving, and it did not.
+
+**Still open, and it is the owner's call:** 80° is a taste decision, not a
+legibility one. Comparison renders at 62/70/80/88 in the game and 62/70/76/82/90
+of the figure went to the owner on 2026-08-17.
+
 ## Corridors and walk routes — 2026-08-16
 
 Not a render pass: it changed the ship, not the way the ship is drawn.

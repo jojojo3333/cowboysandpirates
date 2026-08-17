@@ -15,7 +15,10 @@ extends SceneTree
 # walk; for that it needs animation clips, which this also reports.
 
 const CELL: int = 128
-const CAMERA_PITCH: float = 62.0
+# Must match CAMERA_PITCH in tools/render_soldier.gd. The whole point of this
+# script is judging a candidate model in the view the game actually uses, so a
+# stale number here silently answers the wrong question.
+const CAMERA_PITCH: float = 80.0
 const CAMERA_SIZE: float = 1.18
 const FACINGS: int = 8
 const SETTLE_FRAMES: int = 3
