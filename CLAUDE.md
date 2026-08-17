@@ -1,8 +1,8 @@
 # CLAUDE.md — working agreement
 
-Read this, then the top of `SLICE.md`, before doing anything. `BACKLOG.md`
-is the queue of everything known to be missing or wanted — and it is the **only**
-file that holds one. Do not start a second.
+Read this, then `BACKLOG.md`, before doing anything. `BACKLOG.md` is the queue
+of everything known to be missing or wanted — and it is the **only** file that
+holds one. Do not start a second. `SYSTEMS.md` says what already exists.
 
 ## What this is
 
@@ -11,8 +11,8 @@ Working title **Deadweight**. Setting is `SETTING.md`: Sol in 2100, a gold rush,
 no aliens and no FTL. You command a small ship and a crew, and the whole design
 goal is that losing one of them costs you something.
 
-Slice 0 ships and three render passes are done. `SLICE.md` has the current
-slice at the top and the state of the art pipeline below it.
+The first mission plays start to finish and four render passes are done.
+`SYSTEMS.md` is the inventory of what the game can and cannot do.
 
 ### The visual reference is Void War, not FTL
 
@@ -44,8 +44,8 @@ We build in slices. **Every slice ends with a running, clickable game.** Never
 leave the project in a state where `godot --path .` does not launch something
 playable. A half-finished system that breaks the build is worse than no system.
 
-The current slice is at the top of `SLICE.md`. Build only that slice. Do not
-start the next one without being asked.
+What is next is at the top of `BACKLOG.md`. Build that. Do not start the next
+thing without being asked.
 
 ## How this project is built
 
@@ -176,7 +176,6 @@ it passed.**
 | File | What it is |
 |------|------------|
 | `BACKLOG.md` | **What is next.** The one ordered queue, plus the briefs for work done outside this repo. |
-| `SLICE.md` | Build order, current slice at the top, render passes below |
 | `GAME_SPEC.md` | Design spec, v0.1 and v0.2 in one file |
 | `SYSTEMS.md` | **What the game can do.** Built, half built, known missing. Not a queue. |
 | `MISSION_01.md` | What mission 1 is, and everything building it requires. Not a queue. |
@@ -210,6 +209,20 @@ Retiring a list of non-goals is not licence to build whatever. The rule that
 replaces it is simpler and harder: **build the thing that was asked for.** If
 the shape of a feature is ambiguous, ask. If you finish a slice early, the
 answer is more tests, not more features.
+
+## Rules for a run nobody is watching
+
+*Folded in from `SLICE.md`, 2026-08-17.*
+
+1. **Commit at every green checkpoint.** An uncommitted context overflow loses
+   hours.
+2. **Never weaken a test to make it pass.** Converting a failing assertion into
+   a skip, widening a tolerance, or deleting a case is the documented way these
+   runs go wrong. If a test is wrong, say so; do not silently adjust it.
+3. **Report `[PLAY-GATED]` numbers, never tune them.**
+4. **Stop at the boundary of what was asked**, even with context left.
+5. **If the request is ambiguous, stop and ask.** Do not invent a workaround for
+   something a human can settle in one sentence.
 
 ## Working style
 

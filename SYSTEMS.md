@@ -160,7 +160,50 @@ than an absent one, because somebody plans around it.
 
 ---
 
-## 6. What is deliberately not a system
+## 6. How it got here
+
+*Folded in from `SLICE.md`, 2026-08-17, when that file was retired.* Kept
+because each entry is evidence for a decision that still holds.
+
+**Where the ship art comes from — settled.** Void War is two people plus a
+contract artist; FTL ships are a hand-drawn hull plus one authored image per
+room, positioned by a layout file; Cosmoteer assembles ships from hand-drawn
+modules. In all three, **the art comes first and the data describes the art**,
+which is why this project traces rooms out of a painted plate rather than
+drawing a hull from polygons. Drawing from primitives has a ceiling that more
+polygons do not raise: a painted hull carries thousands of individually decided
+pixels, while rules produce regularity, and the eye reads regularity as
+machine-made.
+
+**A render pass may never change a simulation number.** If the balance report
+moves during presentation work, something has leaked from `ui/` into `sim/`.
+The report read 39.4s before and after all of the first three passes. Replacing
+the *ship* is not a render pass — a new plate changes distances, and distance is
+a simulation number.
+
+| Pass | What changed | Why it is worth remembering |
+|---|---|---|
+| **1** — "it looked like a text adventure" | Six flat grey rectangles became a drawn hull with chamfers, nacelles and lit interiors. | All of it was deleted in pass 2. It is the evidence that drawing a hull from code has a ceiling. |
+| **2** — the plate is the ship | A painted plate replaced every drawn primitive; rooms became traced polygons; grid coordinates were deleted because adjacency is what the art shows. | The simulation only ever read `adjacent`, so this cost `sim/` nothing — the first proof that the `sim`/`ui` split was worth its cost. |
+| **3** — crew are people | Rendered figures on 8-facing sheets replaced two ellipses and a highlight. | Three rounds of tuning the ellipses could not have got there. Some problems are the wrong approach, not the wrong parameters. |
+| **4** — seen from above | The render camera went from 62° to 80°, and the walk was rebuilt rather than rescaled. | The ship was drawn from above and the crew from the side. Also where "render the comparison before believing the reasoning" was learned. |
+
+**Corridors, 2026-08-16.** Crew used to walk room centre → door → room centre in
+straight lines, cutting through bulkheads. The fix was data, not code: a plate
+with a painted corridor stripe, traced into waypoints. All 78 room-to-room
+routes were checked against the bulkheads in the art; none crosses one.
+
+**Travel costs distance, 2026-08-16.** Not a flat fee per room. Crossing the
+whole ship has to cost more than stepping across a corridor, or the layout means
+nothing and it does not matter where anyone stands. This is what moved the
+canary to 40.3s, deliberately.
+
+**The old slice plan is gone with it.** `SLICE.md` carried slices 1–5 written in
+the first hour — four rooms per ship as labelled `ColorRect`s, programmer art,
+no plate. Every one of them was overtaken by what actually got built. Keeping a
+plan that describes a different game is worse than having none.
+
+## 7. What is deliberately not a system
 
 Kept short, and here so the list above does not swallow everything.
 

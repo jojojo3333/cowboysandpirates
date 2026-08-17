@@ -2,7 +2,7 @@
 
 The design spec, both versions in one file. v0.1 is built; v0.2 is not started.
 Where the two disagree about something already built, v0.1 wins — see
-`SLICE.md` for what is actually done.
+`SYSTEMS.md` for what is actually done.
 
 Merged from `GAME_SPEC.md` and `GAME_SPEC.md`, which had grown
 overlapping goals, non-goals, determinism and acceptance sections.

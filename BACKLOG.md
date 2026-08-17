@@ -9,7 +9,6 @@ broken, and it doubles as the brief pack for work done outside this repo.
 | Question | File |
 |---|---|
 | **What is next?** | **this file** |
-| What is the build order, and what is done? | `SLICE.md` |
 | What are the rules of the game? | `GAME_SPEC.md` |
 | What can the game already do? | `SYSTEMS.md` |
 | What does mission 1 consist of, and what does it need? | `MISSION_01.md` |
@@ -24,8 +23,8 @@ That was two too many, so `NEXT_SESSION.md` is gone and everything it held is
 here. Now there is one rule:
 
 - **`BACKLOG.md` — what happens next.** Nothing else may hold a queue.
-- **`SLICE.md` — what the game is, in build order, and what is already done.**
-  It records history and the shape of the thing; it does not schedule work.
+- **`SYSTEMS.md` — what the game can already do.** It records capability and
+  history; it does not schedule work.
 - **`GAME_SPEC.md` — the rules**, including the lists of what must *not* be
   built.
 
@@ -36,16 +35,21 @@ behind.
 
 ## START HERE — status, 2026-08-17
 
-Slice 0 plays start to finish. The ship is a traced thirteen-compartment plate
-with a corridor graph; crew walk the corridors and travel costs distance. Crew
-are the Silver Soldier with a walk authored on his own rig, tinted per class.
-All three verify commands green, balance canary **40.3s**.
+The cargo-hold mission plays start to finish. The ship is a traced
+thirteen-compartment plate with a corridor graph; crew walk the corridors in
+single file and travel costs distance. Crew can be box-selected and ordered as
+a squad. Four pirates are aboard as real actors, and a scripted cutscene walks
+them from the airlock to the crew quarters with nobody touching the mouse.
+
+**All four verify commands green, balance canary 40.3s, 117 play checks.**
 
 ```
-tools/verify.sh            # rules, static, sim — all three
+tools/verify.sh            # rules, static, sim, play
 ```
 
-**The first three things next session, in order:**
+`SYSTEMS.md` is the inventory of what exists. This file decides what is next.
+
+**Done since, in order:**
 
 1. ~~**Verify the Beckett / Ziva claims.**~~ Partly done 2026-08-17 — findings
    appended to `world/research/2026-08-17-beckett-ziva-agent-loop.md`. **The
@@ -345,7 +349,7 @@ Build it small and project-owned rather than adopting a framework. It slots into
 
 ### 3. Slice 1 — the pirates open fire (phase B)
 
-Defined in `SLICE.md`. The first real combat. Do not start it before crew
+See `MISSION_01.md`, act 2. The first real combat. Do not start it before crew
 movement exists.
 
 ### 4. The six visible boarders — *unblocked by room capacity, needs #1*
@@ -394,7 +398,7 @@ spec". See **Brief D**.
   capacity 2. Fold it into `weapons` if that is wrong.
 - **The plate is 1797 px on the long axis** where `ASSETS.md` asks for 2048+.
   Nothing breaks; a bigger window reaches the limit sooner than intended.
-- **`tests/` is empty.** `tools/sim_runner.gd` is the only harness. `SLICE.md`
+- **`tests/` is empty.** `tools/sim_runner.gd` is the only harness. `SYSTEMS.md`
   Slice 5 wants random legal play and a win rate once combat exists.
 - **Corridors that dead-end against the hull carry no waypoints.** Cosmetic and
   intentional, noted so nobody "fixes" it.
@@ -704,7 +708,7 @@ is all you can do. Phase B keeps that verb and adds a reason to move *fast* and
 crew you have to deploy, so the tutorial's reward is the next scene's mechanic.
 
 **It also resolves the conflict flagged yesterday.** Phase B is ship-to-ship
-gunnery, which is exactly `SLICE.md` Slice 1. Boarding is only in phase A, and
+gunnery, which is exactly `SYSTEMS.md` Slice 1. Boarding is only in phase A, and
 only in the abstracted form that already exists — the hack/fight choice — so
 nothing here needs the full boarding mechanic that `GAME_SPEC v0.2 section 3`
 defers. If phase A ever grows into a real room-by-room fight, that is a separate

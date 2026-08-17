@@ -309,7 +309,7 @@ def rule_tabs() -> None:
 
 def rule_one_queue() -> None:
     for path in sorted(ROOT.glob("*.md")):
-        if path.name in ("BACKLOG.md", "SLICE.md", "GAME_SPEC.md"):
+        if path.name in ("BACKLOG.md", "GAME_SPEC.md"):
             continue
         text = path.read_text(encoding="utf-8", errors="replace").lower()
         if "## next session" in text or "## todo" in text or "## backlog" in text:
