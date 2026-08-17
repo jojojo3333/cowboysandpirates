@@ -150,15 +150,20 @@ func order_move(room_id: String, ids: Array[String] = []) -> bool:
 			if m != null:
 				movers.append(m)
 
+	# Everyone accepted leaves a beat after the one before. The first goes at
+	# once, so a single crew member — every existing caller — is untouched.
+	var stagger: float = float(_timing().get("squad_stagger_seconds", 0.9))
+	var leaving: int = 0
 	var any: bool = false
 	for m: CrewMember in movers:
-		if _order_one(m, room_id):
+		if _order_one(m, room_id, stagger * float(leaving)):
+			leaving += 1
 			any = true
 	return any
 
 
 # One crew member, one destination. Everything that can refuse a move is here.
-func _order_one(m: CrewMember, room_id: String) -> bool:
+func _order_one(m: CrewMember, room_id: String, delay: float = 0.0) -> bool:
 	if not m.can_take_orders():
 		return false
 	# TOCK cutting somebody loose is not interruptible by a walk order; the
@@ -182,11 +187,15 @@ func _order_one(m: CrewMember, room_id: String) -> bool:
 		return false
 
 	m.route = route_to
+	# Only set on a fresh departure. Re-routing somebody already walking must not
+	# stop them dead for a second in the middle of a corridor.
+	if not m.is_committed():
+		m.move_delay = maxf(delay, 0.0)
 	_emit("MOVE_ORDERED", LogEvent.NEUTRAL, [m.id], {
 		"to": room_id, "hops": m.route.size(),
 		"seconds": snappedf(_route_seconds(m), 0.1),
 	})
-	if not m.is_moving():
+	if not m.is_committed():
 		_begin_hop(m)
 	return true
 
@@ -371,9 +380,22 @@ func _tick_fight(dt: float) -> void:
 # shows up as one crew member silently skipping a hop.
 func _tick_movement(dt: float) -> void:
 	for m: CrewMember in all_hands():
-		if not m.is_moving():
+		if not m.is_committed():
 			continue
-		m.move_remaining -= dt
+		# Waiting their turn to leave. The delay burns first and any remainder of
+		# the tick spills into the walk, so a staggered squad moves at one speed
+		# rather than the back of the queue being quietly slower.
+		#
+		# `step`, not `dt` — `dt` is the whole loop's, and decrementing it here
+		# would steal time from every crew member checked after this one.
+		var step: float = dt
+		if m.move_delay > 0.0:
+			m.move_delay -= step
+			if m.move_delay > 0.0:
+				continue
+			step = -m.move_delay
+			m.move_delay = 0.0
+		m.move_remaining -= step
 		if m.move_remaining > 0.0:
 			continue
 		m.room = m.move_target
@@ -480,12 +502,12 @@ func all_hands() -> Array[CrewMember]:
 func is_busy() -> bool:
 	if task != Task.IDLE:
 		return true
-	return tock != null and tock.is_moving()
+	return tock != null and tock.is_committed()
 
 
 func anyone_moving() -> bool:
 	for m: CrewMember in all_hands():
-		if m.is_moving():
+		if m.is_committed():
 			return true
 	return false
 

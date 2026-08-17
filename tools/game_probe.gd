@@ -71,7 +71,7 @@ func selected() -> Array:
 func movers() -> Array:
 	var out: Array = []
 	for member: CrewMember in _crew_list():
-		if member.is_moving():
+		if member.is_committed():
 			out.append(member.id)
 	return out
 
@@ -104,6 +104,7 @@ func crew() -> Array:
 			"state": str(STATE_NAMES.get(member.state, member.state)),
 			"synthetic": member.is_synthetic,
 			"moving": member.is_moving(),
+			"waiting_to_leave": member.is_committed() and not member.is_moving(),
 			"move_target": member.move_target,
 			"route": member.route.duplicate(),
 		}

@@ -48,11 +48,11 @@ func _init() -> void:
 		printerr("order_move('%s') refused" % destination)
 		quit(1)
 		return
-	print("route: %s" % str(sim.route))
+	print("route: %s" % str(sim.tock.route))
 
 	var frame: int = 0
 	var elapsed: float = 0.0
-	while sim.task == RescueScene.Task.TRANSIT and elapsed < max_seconds:
+	while sim.tock.is_moving() and elapsed < max_seconds:
 		await _shot("%s-%03d.png" % [out_prefix, frame])
 		frame += 1
 		var ticks: int = int(STEP_SECONDS * 20.0)

@@ -68,6 +68,29 @@ verify_static() {
     ok "project parses and imports"
   fi
 
+  # Every .gd file, parsed.
+  #
+  # `--import` above only compiles scripts something references, so a standalone
+  # tool script can rot for days without a single check noticing — and then the
+  # Godot editor, which parses everything on open, greets the owner with an
+  # error. That is exactly how `tools/walk_frames.gd` shipped still referring to
+  # `Task.TRANSIT` after movement moved onto CrewMember.
+  #
+  # `--check-only` parses without running, and exits 0 either way, so the output
+  # is what has to be read. Same reason as everywhere else in this file.
+  local parse_failed=0
+  local gd
+  while IFS= read -r gd; do
+    local check
+    check="$("$GODOT" --headless --check-only --script "res://$gd" 2>&1)"
+    if grep -qiE 'Parse Error|Failed to load script|Compile Error' <<<"$check"; then
+      parse_failed=1
+      echo "  $gd"
+      grep -iE 'Parse Error|Compile Error' <<<"$check" | head -3 | sed 's/^/    /'
+    fi
+  done < <(find sim ui tools tests -name '*.gd' 2>/dev/null | sort; ls *.gd 2>/dev/null)
+  if [[ $parse_failed -eq 0 ]]; then ok "every .gd parses"; else bad "every .gd parses"; fi
+
   out="$("$GODOT" --headless --script tools/validate_data.gd 2>&1)"
   local rc=$?
   echo "$out" | grep -E '^(WARN|ERROR|data )' || true

@@ -231,6 +231,18 @@ Two things fall out of that and are worth knowing before touching it:
   another all see the same empty room and all set off for it.
 - **`order_move` succeeds if anybody accepts.** Ordering six people into a room
   with space for four should move four and refuse two, not refuse all six.
+- **A squad leaves in single file.** Everyone ordered together would otherwise
+  set off on the same tick and walk the same corridor at the same speed, drawn
+  on top of each other for the whole trip. `squad_stagger_seconds` in
+  `data/scene_rescue.json` delays each departure after the first. Nobody walks
+  faster or slower — only the moment they start differs, so `is_moving()` means
+  "walking now" and `is_committed()` means "under orders", and capacity and
+  mission resolution both ask the second one.
+
+This is a stagger, **not collision avoidance**. Two crew ordered separately can
+still overlap, and nothing stops anyone walking through anyone else. Real
+avoidance needs crew to occupy space in the corridor rather than a point along
+it, and that is a much larger change than this one.
 
 ## 5b. The truth layer — `tools/game_probe.gd`
 

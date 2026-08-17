@@ -438,11 +438,38 @@ func _check_selection() -> void:
 		"ordered %d selected crew to %s but only %s set off"
 			% [probe.selected().size(), destination, moving])
 	for member: Dictionary in probe.snapshot()["crew"]:
-		if not bool(member["moving"]):
+		if not bool(member["moving"]) and not bool(member["waiting_to_leave"]):
 			continue
 		_check("multi-move-target", str(member["route"][member["route"].size() - 1]) == destination,
 			"%s was ordered to %s but is routed to %s"
 				% [member["name"], destination, member["route"]])
+
+	# **The squad must not walk as one body.** Ordered together, everyone leaves
+	# on the same tick, walks the same corridor at the same speed and occupies
+	# the same pixel for the whole journey — the player sees one figure set off
+	# and two arrive. They now leave one after another, and this is the check
+	# that says so: step into the middle of the walk and measure the gap.
+	_step(main, 40)
+	var seen: Dictionary = {}
+	var closest: float = INF
+	var pair: String = ""
+	for member: Dictionary in probe.snapshot()["crew"]:
+		if not bool(member["moving"]):
+			continue
+		var at: Vector2 = Vector2(float(member["at"][0]), float(member["at"][1]))
+		for other_id: String in seen:
+			var gap: float = at.distance_to(seen[other_id] as Vector2)
+			if gap < closest:
+				closest = gap
+				pair = "%s and %s" % [other_id, member["name"]]
+		seen[str(member["name"])] = at
+	if seen.size() > 1:
+		# A figure is about 35 px wide on the plate at crew scale. Anything under
+		# that and they are drawn on top of one another.
+		_check("squad-spacing", closest > 35.0,
+			"%s are %.0f px apart mid-walk; they read as one person" % [pair, closest])
+	else:
+		_skipped.append("squad-spacing — fewer than two crew were walking at once")
 
 	main.queue_free()
 	await process_frame

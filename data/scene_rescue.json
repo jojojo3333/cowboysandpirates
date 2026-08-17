@@ -14,6 +14,8 @@
     "_comment": "[PLAY-GATED] every one of these. Build as written, report, do not tune.",
     "_speed_note": "Travel costs distance divided by speed, not a flat fee per room. 103 px/s is the old six-room ship's average hop (309 px) at its authored 3.0 s, carried forward so the game's pace is preserved rather than reinvented.",
     "crew_walk_speed": 103.0,
+    "_stagger_note": "Crew ordered together leave one after another rather than as one body. Two people walking the same corridor at the same speed occupy the same pixel for the whole trip and read as one person. 0.9 s at 103 px/s puts about 93 px between them, which is more than a figure is wide.",
+    "squad_stagger_seconds": 0.9,
     "free_seconds": 6.0,
     "hack_seconds": 18.0,
     "hack_stagger_seconds": 4.0,

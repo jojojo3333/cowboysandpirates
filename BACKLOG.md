@@ -138,6 +138,17 @@ Carried forward so they are not rediscovered. Every one of these was paid for.
 - **Render the comparison before believing the reasoning.** "A pure overhead
   view of a human is a blob" sat in `ASSETS.md` for a day and decided the camera
   angle. It took one contact sheet to show it was false at every angle tested.
+- **`--import` does not parse every script.** It compiles what something
+  references, so a standalone tool script can rot unnoticed while every check
+  stays green — and then the Godot *editor*, which parses everything on open,
+  greets the owner with the error. `tools/walk_frames.gd` shipped that way,
+  still referring to `Task.TRANSIT` after movement moved onto `CrewMember`.
+  `verify.sh static` now runs `--check-only` over every `.gd` in the project.
+- **Crew ordered together will walk as one body unless told not to.** Same
+  route, same speed, same starting tick: two people occupy the same pixel for
+  the entire journey and the player sees one figure leave and two arrive. The
+  fix is a departure stagger, not collision avoidance — they leave one after
+  another and the corridor gets a queue.
 - **A view that builds itself lazily can be clicked before it exists.**
   `ShipView` creates its Node2D world on the first `_process` that has a scene
   and a layout, but `_gui_input` starts arriving the moment the node is in the

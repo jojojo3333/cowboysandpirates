@@ -32,8 +32,28 @@ var move_remaining: float = 0.0
 var move_total: float = 0.0
 var route: Array[String] = []
 
+# How long this crew member still waits before setting off.
+#
+# Ordered as a squad, everyone would otherwise leave on the same tick, walk the
+# same corridor at the same speed, and occupy the same pixel for the whole
+# journey — five people arriving as one figure that suddenly becomes five. So
+# they leave one after another, and the corridor gets a queue instead of a
+# stack. Nobody walks faster or slower; they just start at different moments.
+var move_delay: float = 0.0
 
+
+# Actually walking right now. Someone still counting down their departure delay
+# is under orders but has not set off, and should be drawn standing in their
+# compartment rather than at the mouth of the corridor.
 func is_moving() -> bool:
+	return move_target != "" and move_delay <= 0.0
+
+
+# Under orders to go somewhere, whether or not they have started. This is the
+# question capacity and mission resolution ask — a room being filled by people
+# on their way to it is full, and a mission is not over while somebody is still
+# about to walk.
+func is_committed() -> bool:
 	return move_target != ""
 
 
@@ -50,6 +70,7 @@ func stop_moving() -> void:
 	move_target = ""
 	move_remaining = 0.0
 	move_total = 0.0
+	move_delay = 0.0
 	route.clear()
 
 
