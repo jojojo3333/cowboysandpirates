@@ -37,7 +37,6 @@ because collections drift.
 | `assets/ship/hull_plate.png` | Supplied by the project owner as `playerwarship1.png`. **Origin not stated.** 1797x875. | Owner-supplied | 2026-08-16 | The player ship: hull, compartments, corridors |
 | `assets/ship/hull_plate_normal.png` | Derived from the plate by `tools/make_normal_map.py` | follows the plate | 2026-08-16 | 2D lighting relief |
 | `assets/crew/soldier_*.png` (3 sheets) | Baked by `tools/render_soldier.gd` from the Silver Soldier | follows the model | 2026-08-16 | Crew sprite sheets: walk, idle, die x 8 facings |
-| `assets/ui/kenney_fantasy_borders/**` (140 files) | Kenney *Fantasy UI Borders* 1.0 | CC0 1.0 | 2026-08-16 | 9-slice panel and border frames, not yet wired up |
 | `tools/crew_src/silver_soldier_animated.glb` | Sketchfab *Silver Soldier (Animated)* by **Jungle Jim** | **CC-BY 4.0** | 2026-08-16 | The only crew model. Bake source, **excluded from the web export** |
 | `assets/crew_src_modular/*.fbx` (2 files) | OpenGameArt *Modular 3D male/female* by **wolkoed** | **CC-BY 4.0** | 2026-08-16 | Candidate crew bodies. **Not wired up** — see below |
 | `assets/crew_src_modular/Textures/*.png` (3 files) | same pack — armour albedo, metallic, normal | **CC-BY 4.0** | 2026-08-16 | Armour material. No body/skin texture ships with the pack |

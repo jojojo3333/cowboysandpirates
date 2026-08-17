@@ -66,12 +66,15 @@ Carried forward so they are not rediscovered. Every one of these was paid for.
   wall.** Exclude yellow before thresholding.
 - **Never conclude from a headless screenshot that something feels good.**
   Colour and geometry are checkable; feel is not.
-- **Before saying something cannot be done, say what it would actually require
-  and check each requirement.** Four times in two days the answer was "that
-  needs a tool I do not have" when the real requirement was something plainly
-  doable — most expensively, "animation needs Mixamo", when the walk was 200
-  lines of bone rotation. The owner asking "are you sure?" is what broke each
-  one; that question is worth asking every time.
+- **Before saying something cannot be done — or is hard — say what it would
+  actually require and check each requirement.** Five times in two days the
+  answer was "that needs a tool I do not have" or "that is bigger than it
+  looks", when the real requirement was something plainly doable. Most
+  expensively: "animation needs Mixamo", when the walk turned out to be 200
+  lines of bone rotation. Most recently: "making corridors walkable changes what
+  a location is", when a room is six fields and a corridor has all six. The
+  owner asking "are you sure?" broke every one of them. **Check the actual
+  requirement before estimating.**
 - The owner is not a programmer. Explain in outcomes, not in diffs.
 
 ## What the balance number is, and is not
@@ -164,9 +167,10 @@ fall short — `ASSETS.md` has the measurements. See **Brief A**.
 
 ### 6. UI chrome — **[OUTSOURCEABLE]**
 
-Still the largest visual gap. Kenney's *Fantasy UI Borders* 9-slices are already
-in `assets/ui/` and still unwired. Wants a design pass against the owner's
-mock-up before any code. See **Brief C**.
+Still the largest visual gap. The Kenney fantasy borders have been **deleted** — 281 files,
+never wired up, and ornate fantasy frames were wrong for a grimdark
+freighter anyway. There is now no UI art in the project at all, which is
+the right starting point. See **Brief C**.
 
 ### 7. Mission and event content — **[OUTSOURCEABLE]**
 
@@ -520,31 +524,43 @@ Split into two pieces because the second is bigger than it looks.
 - `order_move` takes a crew member instead of assuming `scene.tock`. Room
   capacity already exists and applies to whoever walks.
 
-### 1b. Corridors as destinations — *the one with the design consequence*
+### 1b. Corridors as destinations
 
-Right now a destination must be a room, because `ShipLayout.path()` returns a
-chain of rooms and rooms are the only things with polygons. **You cannot send
-anyone into a corridor.**
+**This was written up as the hard half. It is not, and the first assessment of
+it was wrong.** Recorded because the mistake is the same shape as the others in
+the list above.
 
-That is wrong for the game the owner is describing: before storming a room you
-want the squad assembled in the corridor outside it. Holding a corridor is a
-tactical position, not a transit.
+A "room" in this project is exactly six fields: `id`, `label`, `system`,
+`polygon`, `capacity`, `adjacent`. Nothing else. Hit-testing, capacity checks,
+pathfinding, lighting and crew placement all run off those six. **A corridor
+segment has all six.** So corridors become destinations by adding entries to
+`rooms[]` in `data/ship_layout.json` with polygons traced along the corridor
+stretches — the same tracing already done for the compartments — and the
+existing machinery picks them up for free.
 
-This is not just a UI change. It means:
+`system` is empty, which is already supported: the reactor and the cargo bay
+have no system either.
 
-- Corridor segments need to be **places**, with a position and an occupancy
-  limit, not just lines between waypoints.
-- `sim/` has to accept a corridor as a valid `room` value for a crew member,
-  which touches `CrewMember.room`, `crew_in_room()`, capacity and the log.
-- Hit-testing has to resolve a click on the corridor to a segment.
-- The existing corridor graph in `data/ship_layout.json` already has the
-  geometry — waypoints and edges. What it lacks is the idea that the stretch
-  between two waypoints is somewhere you can stand.
+Three real consequences, none of them blockers:
 
-**Suggested order:** 1a first, on rooms only. It is self-contained, it unblocks
-phase A, and it can ship on its own. Then 1b as its own slice, because it
-changes what a "location" is in the simulation and that deserves its own commit
-and its own balance report.
+- **Adjacency changes shape and gets more honest.** Today every compartment on
+  the corridor is adjacent to every other, which is a shortcut standing in for
+  "they share a corridor". With corridor segments as places, it becomes
+  compartment to corridor to compartment, which is what the ship actually is.
+  Travel already costs distance rather than hops, so this moves the balance
+  number only by the small difference between routing via a corridor centroid
+  and routing along the stripe.
+- **`_slot()` in `ui/ship_view.gd` places crew in a grid around the centroid.**
+  A long thin corridor wants them strung out along its length instead. One
+  function.
+- **Corridors would get a `PointLight2D` each**, since lights are added per
+  room. Probably an improvement; may want a dimmer, longer light for a corridor
+  than for a compartment.
+
+The `walk_distances` table is regenerated by the same script that produced it.
+
+**Do 1a first anyway** — not because 1b is hard, but because 1a alone unblocks
+phase A and the two are easier to judge separately.
 
 ## A note on the research, and on unverified claims
 
