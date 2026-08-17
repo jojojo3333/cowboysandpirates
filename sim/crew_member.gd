@@ -17,6 +17,13 @@ var max_hp: int = 100
 var state: int = State.ACTIVE
 var is_synthetic: bool = false
 
+# Whose side they are on. A boarder is the same class of object as a crew
+# member — same movement, same rooms, same corridors, same sprite — because
+# every one of those was already built and a hostile that reimplements them
+# would drift out of step within a week. What differs is the colour they are
+# drawn in and who may give them orders.
+var is_hostile: bool = false
+
 # --- movement ---------------------------------------------------------------
 #
 # Where this crew member is walking, and how far through the current hop they

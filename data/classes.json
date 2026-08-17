@@ -30,7 +30,7 @@
     {
       "id": "soldier",
       "label": "Soldier",
-      "description": "Fighter. There is nothing to fight yet - boarding arrives in v0.3. Deliberately the weakest class in v0.2. Do not invent compensating mechanics.",
+      "description": "Fighter. Boarding combat is not built yet, so the bonuses below are all this class currently does. How strong it should end up is an open question - do not treat any figure here as settled.",
       "unique": false,
       "is_synthetic": false,
       "bonuses": {
@@ -65,7 +65,7 @@
     {
       "id": "medic",
       "label": "Medic",
-      "description": "Mans the medical slot. Worth far less on a ship that installed a Clone Bay - intentional, and part of the cost of that choice. Do not soften it.",
+      "description": "Mans the medical slot. How this class sits alongside a Clone Bay is an open question and not yet decided.",
       "unique": false,
       "is_synthetic": false,
       "bonuses": {
@@ -83,6 +83,16 @@
         "hack_skill": 0
       },
       "colour": "#8fd3d9"
+    },
+    {
+      "id": "pirate",
+      "label": "Boarder",
+      "description": "Not a playable class. Pirates who came aboard. Same suit as the crew, told apart by colour, which is also how the enemy ship's crew are drawn - a separate model is a want, not a need. No bonuses: they have no mechanics of their own yet, only presence and movement.",
+      "unique": false,
+      "is_synthetic": false,
+      "is_hostile": true,
+      "bonuses": {},
+      "colour": "#c4382c"
     }
   ]
 }

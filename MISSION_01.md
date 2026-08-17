@@ -103,8 +103,8 @@ Ordered by how much else depends on them.
 | # | System | What it is | Size |
 |---|---|---|---|
 | B1 | **Dialogue sequences** | A scripted list of lines: who speaks, what they say, which audio file, how long to hold, whether the sim is paused meanwhile. Advances on time or on click. **Skippable.** | Medium — the backbone of act 1 |
-| B2 | **Boarders as actors** | Hostiles that exist in the simulation: an id, a room, a state, drawn on the plate in a hostile tint. Four of them, two pairs, placed by data. | Medium — touches `sim/` |
-| B3 | **A cutscene runner** | A timeline that moves actors between rooms and plays clips at set times, with the simulation held still. Not AI; a script that says "at 2.0 s, this pirate walks to the hold". | Medium-large — the riskiest item |
+| B2 | ~~**Boarders as actors**~~ | **Done 2026-08-17.** Four pirates in `data/scene_rescue.json`, a `pirate` class in `data/classes.json`, `is_hostile` on `CrewMember`. They walk the same corridors and are drawn by the same code as the crew; only the colour and who may command them differ. | — |
+| B3 | **A cutscene runner** — *movement done, actions not* | `sim/cutscene.gd` plays a timeline of beats against the simulation, headlessly. Moving actors and waiting for them to arrive both work. **What it cannot do yet is anything other than move**: no striking, no dragging, no clip triggering. | Half done |
 | B4 | **The captain as a speaker** | The player has no representation at all today. Needs a name and somewhere for their lines to appear. No sprite required. | Small |
 | B5 | **Simultaneous hack** | Three seconds, then all four boarders drop together. Today it is 18 seconds staggered 4 apart, one at a time. | Small — but see the warning below |
 | B6 | **A prone/collapsed hold** | A dropped boarder must *stay* dropped, holding the last frame of `die` rather than looping. | Small |
@@ -120,7 +120,7 @@ takes *by design*. When it moves, it gets reported and stated — never tuned ba
 | # | Deliverable | Honest assessment |
 |---|---|---|
 | C1 | **Boarder look** | Cheapest good answer: the same rendered figure in a hostile tint, as the enemy ship's crew already use. A separate model is a want, not a need. |
-| C2 | **A "beaten" beat** | We have `die` — an authored forward collapse. For a pirate striking someone, that plus a small lunge on the attacker reads well enough at this size. |
+| C2 | **A "beaten" beat** | We have `die` — an authored forward collapse. For a pirate striking someone, that plus a small lunge on the attacker reads well enough at this size. **This is the next chunk**, together with a `play_clip` beat in the cutscene runner. |
 | C3 | **A "dragged" pose** | The genuinely new one. Cheapest version that reads: the victim holds a prone pose and moves with the pirate, drawn slightly behind and below. It will look clunky. That is the agreed price of act 1 existing at all. |
 | C4 | **Camera focus** *(optional)* | The view currently always shows the whole ship. A cutscene reads far better if it can push in on a compartment. Genuinely optional — cut it first if time runs out. |
 

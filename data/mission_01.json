@@ -1,0 +1,42 @@
+{
+  "_comment": "Mission 1, act 1. See MISSION_01.md for the whole act and what is still missing. Only the boarding cutscene exists so far.",
+  "id": "mission_01",
+  "title": "THE BOARDING",
+  "cutscenes": {
+    "boarding": {
+      "_comment": "Four pirates move from the airlock they came in through to the crew quarters. This is the movement half of the beat only - striking the crew and dragging them to the hold needs poses that are not authored yet, and is deliberately not faked here. See MISSION_01.md C2 and C3.",
+      "_timing_note": "Seconds from the start of the cutscene. Walk durations are not written here: the simulation charges distance divided by speed along the real corridors, so a beat says when someone sets off and 'wait_until_still' says when the timeline may continue.",
+      "beats": [
+        {
+          "_note": "Both pairs break for the quarters at once, from opposite ends of the ship.",
+          "at": 0.0,
+          "actors": [
+            "pirate_1",
+            "pirate_2"
+          ],
+          "move_to": "quarters"
+        },
+        {
+          "at": 0.4,
+          "actors": [
+            "pirate_3",
+            "pirate_4"
+          ],
+          "move_to": "quarters"
+        },
+        {
+          "_note": "Nothing further until every one of them has arrived.",
+          "at": 0.5,
+          "wait_until_still": true
+        }
+      ],
+      "_staging_note": "Where actors stand when the cutscene starts, which is not where the mission starts them. The pirates come in through the airlock; by the time the player takes control they have spread out to the cockpit and the quarters, which is what data/scene_rescue.json places them at.",
+      "places": {
+        "pirate_1": "airlock",
+        "pirate_2": "airlock",
+        "pirate_3": "airlock",
+        "pirate_4": "airlock"
+      }
+    }
+  }
+}

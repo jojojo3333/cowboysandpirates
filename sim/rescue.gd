@@ -33,6 +33,11 @@ var config: Dictionary = {}
 var crew: Array[CrewMember] = []
 var tock: CrewMember = null
 
+# The pirates aboard. Kept in their own list rather than mixed into `crew`,
+# because almost every question this file asks — who is tied, who can be freed,
+# who counts as resolved — means the ship's own people.
+var boarders: Array[CrewMember] = []
+
 var task: int = Task.IDLE
 var task_remaining: float = 0.0
 
@@ -88,6 +93,10 @@ func _init(seed_in: int = 0) -> void:
 		tock.room = str(config.get("tock_start_room", "weapons"))
 		tock.max_hp = max_hp
 		tock.hp = max_hp
+
+	boarders = DataLoader.load_boarders(config)
+	for b: CrewMember in boarders:
+		_by_id[b.id] = b
 
 	_emit("SCENE_START", LogEvent.NEUTRAL, [], {"seed": rng.seed_value})
 	for line: Variant in config.get("opening", []):
@@ -493,7 +502,13 @@ func all_hands() -> Array[CrewMember]:
 	if tock != null:
 		out.append(tock)
 	out.append_array(crew)
+	out.append_array(boarders)
 	return out
+
+
+# Everyone aboard who is not on our side.
+func hostiles() -> Array[CrewMember]:
+	return boarders
 
 
 # True while TOCK has something in hand — walking or cutting someone loose.

@@ -107,9 +107,11 @@ static func load_crew() -> Array[CrewMember]:
 	var classes_raw: Dictionary = load_json(CLASSES_PATH)
 
 	var synthetic_classes: Dictionary = {}
+	var hostile_classes: Dictionary = {}
 	for entry: Variant in classes_raw.get("classes", []):
 		var c: Dictionary = entry as Dictionary
 		synthetic_classes[str(c.get("id", ""))] = bool(c.get("is_synthetic", false))
+		hostile_classes[str(c.get("id", ""))] = bool(c.get("is_hostile", false))
 
 	var out: Array[CrewMember] = []
 	for entry: Variant in crew_raw.get("crew", []):
@@ -120,6 +122,33 @@ static func load_crew() -> Array[CrewMember]:
 		m.class_id = str(d.get("class", ""))
 		m.room = str(d.get("starting_room", ""))
 		m.is_synthetic = bool(synthetic_classes.get(m.class_id, false))
+		m.is_hostile = bool(hostile_classes.get(m.class_id, false))
+		out.append(m)
+	return out
+
+
+# The boarders, built from the scene rather than from crew.json — they belong to
+# an encounter, not to the ship's roster. Same class of object as the crew, so
+# they inherit walking, rooms and corridors for free.
+static func load_boarders(scene_config: Dictionary) -> Array[CrewMember]:
+	var classes_raw: Dictionary = load_json(CLASSES_PATH)
+	var hostile_classes: Dictionary = {}
+	for entry: Variant in classes_raw.get("classes", []):
+		var c: Dictionary = entry as Dictionary
+		hostile_classes[str(c.get("id", ""))] = bool(c.get("is_hostile", false))
+
+	var out: Array[CrewMember] = []
+	for entry: Variant in scene_config.get("boarders", []):
+		var d: Dictionary = entry as Dictionary
+		var m: CrewMember = CrewMember.new()
+		m.id = str(d.get("id", ""))
+		m.display_name = str(d.get("name", m.id))
+		m.class_id = str(d.get("class", "pirate"))
+		m.room = str(d.get("room", ""))
+		m.is_hostile = bool(hostile_classes.get(m.class_id, true))
+		if m.id == "" or m.room == "":
+			push_error("boarder entry needs an id and a room: %s" % str(d))
+			continue
 		out.append(m)
 	return out
 

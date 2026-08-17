@@ -7,6 +7,13 @@
   "title": "THE CARGO HOLD",
 
   "tock_start_room": "weapons",
+  "_boarders_comment": "Four pirates aboard, in two pairs. They are the same class of object as the crew - same movement, same corridors, same sprite - separated by the 'pirate' class colour. Rooms chosen off the player's route to the hold so their presence does not silently change how long the rescue takes; see MISSION_01.md.",
+  "boarders": [
+    { "id": "pirate_1", "name": "Boarder", "class": "pirate", "room": "cockpit" },
+    { "id": "pirate_2", "name": "Boarder", "class": "pirate", "room": "cockpit" },
+    { "id": "pirate_3", "name": "Boarder", "class": "pirate", "room": "quarters" },
+    { "id": "pirate_4", "name": "Boarder", "class": "pirate", "room": "quarters" }
+  ],
   "captives_room": "cargo",
   "captives": ["smith", "ostrow", "vela", "mazur", "kwon"],
 

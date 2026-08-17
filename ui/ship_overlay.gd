@@ -58,7 +58,7 @@ func _draw_target() -> void:
 	# the outline brighter for no information.
 	var seen: Dictionary = {}
 	for member: CrewMember in view.all_crew():
-		if member.route.is_empty():
+		if member.is_hostile or member.route.is_empty():
 			continue
 		seen[member.route[member.route.size() - 1]] = true
 
@@ -94,7 +94,9 @@ func _draw_hover() -> void:
 # The whole ordered route, through the doorways the crew actually walk through.
 func _draw_route() -> void:
 	for member: CrewMember in view.all_crew():
-		if not member.is_moving():
+		# Ours only. A dashed line showing exactly where the boarders intend to
+		# go is the player reading the enemy's orders off the screen.
+		if member.is_hostile or not member.is_moving():
 			continue
 		var points: PackedVector2Array = view.route_points_for(member)
 		for i: int in range(points.size() - 1):
@@ -166,6 +168,12 @@ func _draw_crew_state() -> void:
 
 
 func _draw_label(member: CrewMember, at: Vector2) -> void:
+	# Boarders get no plate. They are anonymous, four of them stand close
+	# together, and four plates reading "Boarder" overlap into a grey smear that
+	# says nothing. The red suit already says which side they are on.
+	if member.is_hostile:
+		return
+
 	var parts: PackedStringArray = member.display_name.split(" ", false)
 	var name: String = parts[parts.size() - 1] if parts.size() > 0 else member.display_name
 	if member.hp < member.max_hp:

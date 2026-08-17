@@ -384,7 +384,8 @@ func _on_crew_clicked(crew_id: String) -> void:
 	if m != null and m.is_tied():
 		scene.order_free(crew_id)
 		return
-	_ship.selected = [crew_id] if m != null and m.can_take_orders() else ([] as Array[String])
+	var selectable: bool = m != null and m.can_take_orders() and not m.is_hostile
+	_ship.selected = [crew_id] if selectable else ([] as Array[String])
 
 
 func _on_crew_box_selected(crew_ids: Array) -> void:

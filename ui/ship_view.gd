@@ -77,6 +77,11 @@ const CREW_SCALE: float = 0.52
 const CLASS_TINT_STRENGTH: float = 0.72
 const CLASS_TINT_LIFT: float = 1.30
 
+# Boarders. Same suit, different side. Matched to ui/enemy_preview_view.gd so a
+# pirate looks the same standing on our deck as on their own.
+const HOSTILE_TINT_STRENGTH: float = 0.86
+const HOSTILE_TINT_LIFT: float = 1.18
+
 var scene: RescueScene = null
 var layout: ShipLayout = null
 
@@ -293,12 +298,17 @@ func to_screen(plate_point: Vector2) -> Vector2:
 
 # --- crew ------------------------------------------------------------------
 
+# Everyone standing on this plate, ours and theirs. Boarders are drawn, hovered,
+# hit-tested and animated by exactly the same code as the crew — the only thing
+# that differs is the colour and who may give them orders.
 func all_crew() -> Array[CrewMember]:
 	var out: Array[CrewMember] = []
 	for m: CrewMember in scene.crew:
 		out.append(m)
 	if scene.tock != null and not out.has(scene.tock):
 		out.append(scene.tock)
+	for b: CrewMember in scene.boarders:
+		out.append(b)
 	return out
 
 
@@ -412,7 +422,14 @@ func _sync_crew() -> void:
 		# but it is also dark, mean brightness 49, and a plain multiply on a dark
 		# sprite only makes it darker. So the tint lifts as well as colours.
 		var tint: Color = _class_colours.get(member.class_id, Color(0.80, 0.82, 0.86))
-		tint = Color(1.0, 1.0, 1.0).lerp(tint, CLASS_TINT_STRENGTH) * CLASS_TINT_LIFT
+		# Hostiles are pulled harder towards their colour and lifted less. The
+		# lift is what makes the suit read as lit steel; crushing it is what
+		# makes a boarder read as matte and not-ours at a glance, which is the
+		# same treatment the enemy ship's crew already get.
+		if member.is_hostile:
+			tint = Color(1.0, 1.0, 1.0).lerp(tint, HOSTILE_TINT_STRENGTH) * HOSTILE_TINT_LIFT
+		else:
+			tint = Color(1.0, 1.0, 1.0).lerp(tint, CLASS_TINT_STRENGTH) * CLASS_TINT_LIFT
 		if member.is_tied():
 			tint = tint.darkened(0.34)
 		sprite.modulate = tint
@@ -581,13 +598,13 @@ func is_dragging() -> bool:
 	return _dragging
 
 
-# Everyone the player can actually command. A box drawn over tied captives
-# selects nobody, because ordering them anywhere would be refused and a
-# selection that cannot be acted on is a lie told by the interface.
+# Everyone the player can actually command. A box drawn over tied captives — or
+# over boarders — selects nobody, because ordering them anywhere would be
+# refused and a selection that cannot be acted on is a lie told by the interface.
 func _crew_in_box(box: Rect2) -> Array:
 	var out: Array = []
 	for member: CrewMember in all_crew():
-		if not member.can_take_orders():
+		if member.is_hostile or not member.can_take_orders():
 			continue
 		if box.has_point(crew_position(member)):
 			out.append(member.id)

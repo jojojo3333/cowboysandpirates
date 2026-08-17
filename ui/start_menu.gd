@@ -34,6 +34,12 @@ const ENTRIES: Array[Dictionary] = [
 		"scene": "res://main_combat.tscn",
 	},
 	{
+		"id": "boarding",
+		"title": "THE BOARDING",
+		"blurb": "In-engine cutscene test. Four pirates come aboard and move on their own.",
+		"scene": "res://main_boarding.tscn",
+	},
+	{
 		"id": "tutorial",
 		"title": "THE CARGO HOLD",
 		"blurb": "The playable mission. Crew movement, orders, and getting to know the ship.",

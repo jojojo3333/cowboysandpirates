@@ -40,6 +40,8 @@ func _init() -> void:
 	var dump: String = _arg("--dump", "")
 
 	await _check_boot_scene()
+	await _check_boarders()
+	await _check_cutscene()
 	await _check_selection()
 	var first: Array = await _run(dump)
 	# Same seed, same steps, same answers. If this ever disagrees, something is
@@ -357,6 +359,107 @@ func _run(dump: String) -> Array:
 	return trace
 
 
+# Boarders are real: they exist, they stand somewhere, they are drawn, and the
+# player cannot command them.
+#
+# That last one is the part worth a check. A boarder is the same class of object
+# as a crew member and passes `can_take_orders()`, so nothing but an explicit
+# rule stops a selection box scooping up four pirates and marching them into the
+# hold. The rule lives in the UI, where the player is; the simulation keeps
+# taking orders for them because a cutscene has to be able to move them.
+func _check_boarders() -> void:
+	var packed: PackedScene = load("res://rescue_scene.tscn") as PackedScene
+	if packed == null:
+		return
+	var main: Node = packed.instantiate()
+	root.add_child(main)
+	await process_frame
+	await process_frame
+	main.set_process(false)
+
+	var scene: RescueScene = main.get("scene") as RescueScene
+	var probe: GameProbe = GameProbe.new(main)
+	var ship: ShipView = _find_ship(main)
+
+	_check("boarders-exist", scene.hostiles().size() == 4,
+		"expected 4 boarders aboard, found %d" % scene.hostiles().size())
+
+	for m: CrewMember in scene.hostiles():
+		_check("boarder-room", scene.layout.get_room(m.room) != null,
+			"%s is in '%s', which is not a room on this ship" % [m.id, m.room])
+		_check("boarder-hostile", m.is_hostile, "%s is aboard but not marked hostile" % m.id)
+
+	# Drawn where the simulation says they are, same as anybody else.
+	for member: Dictionary in probe.snapshot()["crew"]:
+		if not str(member["id"]).begins_with("pirate"):
+			continue
+		_check("boarder-drawn", bool(member.get("drawn_in_own_room", false)),
+			"%s stands in %s but is drawn at %s, outside it"
+				% [member["id"], member["room"], member.get("drawn_at", [])])
+
+	# A box over the whole ship must pick up crew and no pirates.
+	if ship != null:
+		_drag(ship, Vector2(-4000.0, -4000.0), Vector2(4000.0, 4000.0))
+		await process_frame
+		var picked: Array = probe.selected()
+		var hostile_picked: Array = []
+		for id: Variant in picked:
+			var m: CrewMember = scene.get_crew(str(id))
+			if m != null and m.is_hostile:
+				hostile_picked.append(id)
+		_check("boarders-unselectable", hostile_picked.is_empty(),
+			"a selection box picked up boarders: %s" % [hostile_picked])
+
+	main.queue_free()
+	await process_frame
+
+
+# The cutscene runs, and it runs headlessly.
+#
+# **This is the check that says an in-engine cutscene is a real system rather
+# than an animation.** If a scripted sequence can only be judged by a person
+# watching it, every future cutscene costs a person watching it. Because the
+# timeline lives in `sim/` and issues ordinary move orders, the whole thing can
+# be run with no window open and asserted on: everyone started here, everyone
+# ended there, and it finished rather than hanging.
+func _check_cutscene() -> void:
+	var scene: RescueScene = RescueScene.new(0)
+	scene.choose_plan("hack")
+	var config: Dictionary = DataLoader.load_json("res://data/mission_01.json")
+	var cutscenes: Dictionary = config.get("cutscenes", {}) as Dictionary
+	var boarding: Dictionary = cutscenes.get("boarding", {}) as Dictionary
+	_check("cutscene-data", not boarding.is_empty(),
+		"data/mission_01.json has no 'boarding' cutscene")
+	if boarding.is_empty():
+		return
+
+	var cut: Cutscene = Cutscene.from_config(scene, boarding)
+	cut.start()
+
+	# Staged before a single tick.
+	for m: CrewMember in scene.hostiles():
+		_check("cutscene-staging", m.room == "airlock",
+			"%s should be staged in the airlock, is in %s" % [m.id, m.room])
+
+	var steps: int = 0
+	while cut.playing and steps < MAX_STEPS:
+		cut.tick(STEP)
+		scene.tick(STEP)
+		steps += 1
+
+	_check("cutscene-finishes", not cut.playing,
+		"the boarding cutscene did not finish within %.0fs" % (float(MAX_STEPS) * STEP))
+	_check("cutscene-progress", is_equal_approx(cut.progress(), 1.0),
+		"cutscene finished reporting %.2f progress" % cut.progress())
+	for m: CrewMember in scene.hostiles():
+		_check("cutscene-arrival", m.room == "quarters",
+			"%s should have reached the quarters, is in %s" % [m.id, m.room])
+	# It has to take time. A cutscene that completes on the first tick means the
+	# beats fired but nobody actually walked anywhere.
+	_check("cutscene-takes-time", scene.time > 1.0,
+		"the cutscene resolved in %.2fs of game time; nobody walked" % scene.time)
+
+
 # Box-select, then order everyone at once.
 #
 # **In its own scene, deliberately.** Two constraints leave nowhere else to put
@@ -476,11 +579,19 @@ func _check_selection() -> void:
 
 
 # Everyone the player could actually give an order to right now.
+#
+# Hostiles are excluded, matching the rule in ShipView. They pass
+# `can_take_orders()` — a boarder is the same class of object as a crew member
+# and the simulation will happily move one, because a cutscene has to be able
+# to. Only the player is forbidden, so only the player's side of the line
+# filters them out. Leaving them in here made this helper report five
+# commandable crew at boot, so the mission never bothered freeing anybody.
 func _commandable(ship: ShipView) -> Array:
 	var out: Array = []
 	for member: CrewMember in ship.all_crew():
-		if member.can_take_orders():
-			out.append(member.id)
+		if member.is_hostile or not member.can_take_orders():
+			continue
+		out.append(member.id)
 	out.sort()
 	return out
 
